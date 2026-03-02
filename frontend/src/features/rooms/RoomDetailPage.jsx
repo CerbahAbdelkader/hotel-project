@@ -105,7 +105,7 @@ export default function RoomDetailPage() {
               )}
 
               <div className="mt-4 text-center">
-                <Link to="/contact" className="text-xs text-stone-400 hover:text-primary-600 transition-colors">
+                <Link to="/contact" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-xs text-stone-400 hover:text-primary-600 transition-colors">
                   Des questions ? Contactez-nous
                 </Link>
               </div>

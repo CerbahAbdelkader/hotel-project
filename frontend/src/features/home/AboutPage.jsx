@@ -20,7 +20,7 @@ export default function AboutPage() {
             <p className="text-stone-600 leading-relaxed mb-8">
               Notre philosophie est simple : offrir à chaque client une expérience personnalisée, chaleureuse et mémorable, à l'image de la générosité légendaire de nos aïeux. Chaque détail compte, chaque sourire est sincère.
             </p>
-            <Link to="/contact">
+            <Link to="/contact" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <Button>Nous rendre visite <ArrowRight size={16} /></Button>
             </Link>
           </div>

@@ -42,8 +42,8 @@ export default function HomePage() {
             <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link to="/contact">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-stone-800 transition-colors">
+            <Link to="/contact" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+              <Button size="lg" variant="outline" className="!border-white !bg-transparent !text-white hover:!bg-white hover:!text-stone-800 transition-all duration-200">
             Nous contacter
               </Button>
             </Link>
@@ -102,7 +102,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-8">
-            <Link to="/services">
+            <Link to="/services" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <Button variant="outline">Voir tous les services <ChevronRight size={16} /></Button>
             </Link>
           </div>
@@ -170,7 +170,7 @@ export default function HomePage() {
             Réservez dès maintenant et vivez une expérience inoubliable. Paiement à l'arrivée, aucun prépaiement requis.
           </p>
           <Link to="/book">
-            <Button size="lg" className="bg-white text-stone-900 hover:bg-amber-50 hover:text-amber-700 hover:scale-105 shadow-xl hover:shadow-2xl transition-all duration-300 group">
+            <Button size="lg" className="!bg-white !text-stone-900 hover:!bg-amber-50 hover:!text-amber-700 hover:scale-105 shadow-xl hover:shadow-2xl transition-all duration-300 group">
               Réserver maintenant <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>

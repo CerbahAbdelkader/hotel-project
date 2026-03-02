@@ -616,6 +616,15 @@ export const USERS = [
     phone: '0665678901',
     createdAt: '2025-03-02T16:00:00',
   },
+  {
+    id: 7,
+    name: 'Nadia Admin',
+    email: 'admin2@hotel-saida.dz',
+    password: 'admin456',
+    role: 'admin',
+    phone: '0550000002',
+    createdAt: '2026-03-03T10:00:00',
+  },
 ]
 
 export const SERVICES = [

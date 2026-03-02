@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MapPin, Phone, Mail, Clock, CheckCircle } from 'lucide-react'
 import Button from '../../shared/ui/Button'
 import Input, { Textarea } from '../../shared/ui/Input'
@@ -8,6 +8,10 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   const handleSubmit = (e) => {
     e.preventDefault()

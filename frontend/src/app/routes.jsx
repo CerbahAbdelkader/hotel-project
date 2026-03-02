@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter } from 'react-router-dom'
+import { createHashRouter } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
 import ProtectedRoute from '../shared/components/ProtectedRoute'
@@ -28,7 +28,7 @@ const Loading = () => (
   </div>
 )
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     element: <MainLayout />,
     children: [

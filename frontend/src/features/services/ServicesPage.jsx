@@ -1,5 +1,5 @@
 import { BedDouble, UtensilsCrossed, Wifi, Clock, Users, Leaf, Phone, ArrowRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
@@ -56,10 +56,12 @@ const services = [
 ]
 
 export default function ServicesPage() {
+  const location = useLocation()
+
   useEffect(() => {
     // Scroll to service card if hash is present in URL, otherwise scroll to top
-    if (window.location.hash) {
-      const id = window.location.hash.substring(1)
+    if (location.hash) {
+      const id = location.hash.substring(1)
       const element = document.getElementById(id)
       if (element) {
         setTimeout(() => {
@@ -69,7 +71,7 @@ export default function ServicesPage() {
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [])
+  }, [location])
 
   return (
     <div className="py-16">
@@ -127,7 +129,7 @@ export default function ServicesPage() {
             Notre équipe est là pour vous renseigner et personnaliser votre séjour selon vos besoins.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link to="/contact">
+            <Link to="/contact" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <Button size="lg" className="bg-primary-500 hover:bg-primary-400">
                 Nous contacter <ArrowRight size={18} />
               </Button>
