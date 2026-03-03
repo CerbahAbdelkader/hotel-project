@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Email administrateur" type="email" placeholder="admin@hotel-saida.dz"
-              value={form.email} onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setError(null) }} required />
+              value={form.email} onChange={e => { setForm(f => ({ ...f, email: e.target.value.replace(/\s+/g, '') })); setError(null) }} required />
             <Input label="Mot de passe" type="password" placeholder="••••••••"
               value={form.password} onChange={e => { setForm(f => ({ ...f, password: e.target.value })); setError(null) }} required />
             {error && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

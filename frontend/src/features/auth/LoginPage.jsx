@@ -64,7 +64,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="votre@email.com"
                 value={form.email}
-                onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setError(null) }}
+                onChange={e => { setForm(f => ({ ...f, email: e.target.value.replace(/\s+/g, '') })); setError(null) }}
                 required
               />
               <div className="relative">

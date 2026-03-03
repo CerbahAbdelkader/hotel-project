@@ -33,7 +33,10 @@ export default function RegisterPage() {
     }, 800)
   }
 
-  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }))
+  const set = (key) => (e) => {
+    const value = key === 'email' ? e.target.value.replace(/\s+/g, '') : e.target.value
+    setForm(f => ({ ...f, [key]: value }))
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-warm-50">

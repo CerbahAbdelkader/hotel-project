@@ -13,7 +13,8 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null)
 
   const login = (email, password) => {
-    const found = USERS.find(u => u.email === email && u.password === password)
+    const normalizedEmail = email.trim().toLowerCase()
+    const found = USERS.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password)
     if (found) {
       const { password: _, ...safeUser } = found
       setUser(safeUser)

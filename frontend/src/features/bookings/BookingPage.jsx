@@ -21,6 +21,8 @@ export default function BookingPage() {
     roomId: preselectedRoomId ? Number(preselectedRoomId) : '',
     checkIn: '',
     checkOut: '',
+    adults: 1,
+    children: 0,
     guestName: user?.name || '',
     guestEmail: user?.email || '',
     guestPhone: user?.phone || '',
@@ -35,19 +37,30 @@ export default function BookingPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
+  useEffect(() => {
+    if (submitted) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [submitted])
+
   const selectedRoom = rooms.find(r => r.id === Number(form.roomId))
   const nights = form.checkIn && form.checkOut ? calcNights(form.checkIn, form.checkOut) : 0
   const total = selectedRoom && nights > 0 ? selectedRoom.price * nights : 0
 
   const validate = () => {
     const e = {}
+    const normalizedEmail = form.guestEmail.trim().replace(/\s+/g, '')
+    const normalizedPhone = form.guestPhone.trim().replace(/\s+/g, '')
     if (!form.roomId) e.roomId = 'Veuillez choisir une chambre.'
     if (!form.checkIn) e.checkIn = 'Date d\'arrivée requise.'
     if (!form.checkOut) e.checkOut = 'Date de départ requise.'
     if (form.checkIn && form.checkOut && form.checkOut <= form.checkIn) e.checkOut = 'Date de départ doit être après l\'arrivée.'
+    if (!Number.isInteger(Number(form.adults)) || Number(form.adults) < 1) e.adults = 'Au moins 1 adulte requis.'
+    if (!Number.isInteger(Number(form.children)) || Number(form.children) < 0) e.children = 'Nombre d\'enfants invalide.'
     if (!form.guestName.trim()) e.guestName = 'Nom requis.'
-    if (!form.guestEmail.trim()) e.guestEmail = 'Email requis.'
     if (!form.guestPhone.trim()) e.guestPhone = 'Téléphone requis.'
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) e.guestEmail = 'Email invalide.'
+    if (normalizedPhone && !/^\+?[0-9]{8,15}$/.test(normalizedPhone)) e.guestPhone = 'Numéro de téléphone invalide.'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -59,9 +72,11 @@ export default function BookingPage() {
       const result = createBooking({
         userId: user?.id || 0,
         roomId: Number(form.roomId),
+        adults: Number(form.adults),
+        children: Number(form.children),
         guestName: form.guestName,
-        guestEmail: form.guestEmail,
-        guestPhone: form.guestPhone,
+        guestEmail: form.guestEmail.trim().replace(/\s+/g, ''),
+        guestPhone: form.guestPhone.trim().replace(/\s+/g, ''),
         checkIn: form.checkIn,
         checkOut: form.checkOut,
         notes: form.notes,
@@ -136,6 +151,24 @@ export default function BookingPage() {
                   <Input label="Départ *" type="date" min={form.checkIn || today} value={form.checkOut}
                     onChange={e => setForm(f => ({ ...f, checkOut: e.target.value }))} error={errors.checkOut} />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Adultes *"
+                    type="number"
+                    min={1}
+                    value={form.adults}
+                    onChange={e => setForm(f => ({ ...f, adults: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    error={errors.adults}
+                  />
+                  <Input
+                    label="Enfants"
+                    type="number"
+                    min={0}
+                    value={form.children}
+                    onChange={e => setForm(f => ({ ...f, children: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    error={errors.children}
+                  />
+                </div>
               </div>
             </Card>
 
@@ -144,8 +177,8 @@ export default function BookingPage() {
               <div className="space-y-4">
                 <Input label="Nom complet *" placeholder="Mohammed Benali" value={form.guestName}
                   onChange={e => setForm(f => ({ ...f, guestName: e.target.value }))} error={errors.guestName} />
-                <Input label="Email *" type="email" placeholder="votre@email.com" value={form.guestEmail}
-                  onChange={e => setForm(f => ({ ...f, guestEmail: e.target.value }))} error={errors.guestEmail} />
+                <Input label="Email (optionnel)" type="email" placeholder="votre@email.com" value={form.guestEmail}
+                  onChange={e => setForm(f => ({ ...f, guestEmail: e.target.value.replace(/\s+/g, '') }))} error={errors.guestEmail} />
                 <Input label="Téléphone *" placeholder="05XXXXXXXX" value={form.guestPhone}
                   onChange={e => setForm(f => ({ ...f, guestPhone: e.target.value }))} error={errors.guestPhone} />
                 <div className="flex flex-col gap-1">
