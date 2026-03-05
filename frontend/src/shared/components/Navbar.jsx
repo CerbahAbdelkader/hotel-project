@@ -7,6 +7,7 @@ const navLinks = [
   { to: '/', label: 'Accueil' },
   { to: '/rooms', label: 'Chambres' },
   { to: '/services', label: 'Services' },
+  { to: '/events', label: 'Événements' },
   { to: '/about', label: 'À propos' },
   { to: '/contact', label: 'Contact' },
 ]
@@ -56,6 +57,7 @@ export default function Navbar() {
                 key={link.to}
                 to={link.to}
                 end={link.to === '/'}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className={({ isActive }) =>
                   `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'text-primary-600 bg-primary-50' : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'}`
                 }
@@ -118,7 +120,7 @@ export default function Navbar() {
         <div className="md:hidden bg-white border-t border-stone-100 px-4 py-4 space-y-1 animate-fade-in">
           {navLinks.map(link => (
             <NavLink key={link.to} to={link.to} end={link.to === '/'}
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
               className={({ isActive }) =>
                 `block px-3 py-2.5 rounded-lg text-sm font-medium ${isActive ? 'text-primary-600 bg-primary-50' : 'text-stone-600'}`
               }

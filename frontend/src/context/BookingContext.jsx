@@ -8,6 +8,7 @@ export function BookingProvider({ children }) {
   const [bookings, setBookings] = useState(BOOKINGS)
   const [rooms, setRooms] = useState(INITIAL_ROOMS)
   const [users, setUsers] = useState(INITIAL_USERS)
+  const [eventReservations, setEventReservations] = useState([])
 
   // Booking actions
   const approveBooking = (id) =>
@@ -41,6 +42,17 @@ export function BookingProvider({ children }) {
     }
     setBookings(prev => [...prev, newBooking])
     return { success: true, booking: newBooking }
+  }
+
+  const createEventReservation = (data) => {
+    const newReservation = {
+      id: 'EV-' + String(eventReservations.length + 1).padStart(3, '0'),
+      ...data,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+    setEventReservations(prev => [...prev, newReservation])
+    return { success: true, reservation: newReservation }
   }
 
   const deleteBooking = (id) =>
@@ -79,14 +91,17 @@ export function BookingProvider({ children }) {
     pendingBookings: bookings.filter(b => b.status === 'pending').length,
     approvedBookings: bookings.filter(b => b.status === 'approved').length,
     paidBookings: bookings.filter(b => b.paymentStatus === 'paid').length,
+    totalEventReservations: eventReservations.length,
+    pendingEventReservations: eventReservations.filter(e => e.status === 'pending').length,
     totalRevenue: bookings.filter(b => b.paymentStatus === 'paid').reduce((sum, b) => sum + b.totalPrice, 0),
     recentBookings: [...bookings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
+    recentEventReservations: [...eventReservations].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
   }
 
   return (
     <BookingContext.Provider value={{
-      bookings, rooms, users,
-      approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, deleteBooking,
+      bookings, eventReservations, rooms, users,
+      approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, createEventReservation, deleteBooking,
       addRoom, updateRoom, deleteRoom, toggleRoomAvailability,
       addUser, deleteUser,
       stats,

@@ -9,6 +9,7 @@ import HomePage from '../features/home/HomePage'
 import RoomsPage from '../features/rooms/RoomsPage'
 import RoomDetailPage from '../features/rooms/RoomDetailPage'
 import ServicesPage from '../features/services/ServicesPage'
+import EventsPage from '../features/events/EventsPage'
 import BookingPage from '../features/bookings/BookingPage'
 import AboutPage from '../features/home/AboutPage'
 import ContactPage from '../features/home/ContactPage'
@@ -36,6 +37,7 @@ export const router = createHashRouter([
       { path: '/rooms', element: <RoomsPage /> },
       { path: '/rooms/:id', element: <RoomDetailPage /> },
       { path: '/services', element: <ServicesPage /> },
+      { path: '/events', element: <EventsPage /> },
       { path: '/about', element: <AboutPage /> },
       { path: '/contact', element: <ContactPage /> },
       { path: '/book', element: <BookingPage /> },

@@ -1,9 +1,14 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Award, Heart, Users, Star } from 'lucide-react'
 import Button from '../../shared/ui/Button'
 import Card from '../../shared/ui/Card'
 
 export default function AboutPage() {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   return (
     <div className="py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">

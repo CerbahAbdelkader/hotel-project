@@ -8,7 +8,7 @@ import Card from '../../shared/ui/Card'
 import StatusBadge from '../../shared/ui/Badge'
 
 export default function AdminBookingsPage() {
-  const { bookings, changeBookingStatus, markAsPaid, markAsUnpaid, deleteBooking } = useBooking()
+  const { bookings, eventReservations, changeBookingStatus, markAsPaid, markAsUnpaid, deleteBooking } = useBooking()
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState({ status: 'all', payment: 'all', search: '' })
 
@@ -176,6 +176,47 @@ export default function AdminBookingsPage() {
           </div>
         </Modal>
       )}
+
+      <div className="mt-8">
+        <h2 className="font-display text-xl font-bold text-stone-800 mb-2">Demandes d'événements</h2>
+        <p className="text-stone-500 text-sm mb-4">{eventReservations.length} demande(s) d'événement au total</p>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-200">
+                  {['ID', 'Client', 'Type', 'Dates', 'Invités', 'Contact', 'Services'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-50">
+                {eventReservations.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-stone-400">Aucune demande d'événement trouvée.</td></tr>
+                ) : [...eventReservations].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(e => (
+                  <tr key={e.id} className="hover:bg-warm-50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-stone-500">{e.id}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-stone-800">{e.clientName}</div>
+                      <div className="text-xs text-stone-400">Créée le {formatDateTime(e.createdAt)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-stone-700">{e.eventType}</td>
+                    <td className="px-4 py-3 text-xs text-stone-500 whitespace-nowrap">
+                      {e.startDate} → {e.endDate}
+                    </td>
+                    <td className="px-4 py-3 text-stone-700">{e.guests}</td>
+                    <td className="px-4 py-3 text-xs text-stone-600">
+                      <div>{e.phone}</div>
+                      <div>{e.email || '—'}</div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-stone-600">{e.services.length ? e.services.join(', ') : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }

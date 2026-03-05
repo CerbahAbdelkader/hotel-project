@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BedDouble, Users, CalendarCheck, Clock, DollarSign, TrendingUp, CheckCircle, ArrowRight } from 'lucide-react'
+import { BedDouble, Users, CalendarCheck, Clock, DollarSign, TrendingUp, CheckCircle, ArrowRight, PartyPopper } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
 import { formatDZD, formatDateTime } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
@@ -56,6 +56,8 @@ export default function AdminDashboard() {
           color="primary" href="/admin/bookings" />
         <StatCard icon={TrendingUp} label="Revenus" value={formatDZD(stats.totalRevenue)}
           sub="Total encaissé" color="green" />
+        <StatCard icon={PartyPopper} label="Événements" value={stats.totalEventReservations}
+          sub={`${stats.pendingEventReservations} en attente`} color="amber" href="/admin/bookings" />
       </div>
 
       {/* Recent bookings */}
@@ -82,6 +84,31 @@ export default function AdminDashboard() {
                     <StatusBadge status={b.status} />
                     <span className="text-xs font-semibold text-stone-600">{formatDZD(b.totalPrice)}</span>
                   </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="mt-6">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+              <h2 className="font-display font-semibold text-stone-800">Dernières demandes d'événements</h2>
+              <Link to="/admin/bookings" className="text-xs text-primary-600 hover:underline flex items-center gap-1">
+                Voir tout <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="divide-y divide-stone-50">
+              {stats.recentEventReservations.length === 0 ? (
+                <div className="px-5 py-6 text-sm text-stone-400">Aucune demande d'événement pour le moment.</div>
+              ) : stats.recentEventReservations.map(e => (
+                <div key={e.id} className="px-5 py-3.5 flex items-center gap-4">
+                  <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <PartyPopper size={14} className="text-amber-700" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-stone-800 truncate">{e.clientName}</div>
+                    <div className="text-xs text-stone-400 truncate">{e.eventType} · {e.startDate} → {e.endDate}</div>
+                  </div>
+                  <div className="text-xs font-semibold text-stone-600">{e.guests} invités</div>
                 </div>
               ))}
             </div>
