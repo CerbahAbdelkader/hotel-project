@@ -44,8 +44,30 @@ export default function BookingPage() {
   }, [submitted])
 
   const selectedRoom = rooms.find(r => r.id === Number(form.roomId))
+  const roomCapacity = selectedRoom?.capacity || 0
   const nights = form.checkIn && form.checkOut ? calcNights(form.checkIn, form.checkOut) : 0
   const total = selectedRoom && nights > 0 ? selectedRoom.price * nights : 0
+
+  useEffect(() => {
+    if (!selectedRoom) return
+
+    setForm(prev => {
+      let adults = Number(prev.adults) || 1
+      let children = Number(prev.children) || 0
+
+      adults = Math.max(1, Math.min(adults, selectedRoom.capacity))
+      children = Math.max(0, children)
+
+      if (adults + children > selectedRoom.capacity) {
+        children = Math.max(0, selectedRoom.capacity - adults)
+      }
+
+      if (adults !== Number(prev.adults) || children !== Number(prev.children)) {
+        return { ...prev, adults, children }
+      }
+      return prev
+    })
+  }, [selectedRoom?.id, selectedRoom?.capacity])
 
   const validate = () => {
     const e = {}
@@ -57,6 +79,12 @@ export default function BookingPage() {
     if (form.checkIn && form.checkOut && form.checkOut <= form.checkIn) e.checkOut = 'Date de départ doit être après l\'arrivée.'
     if (!Number.isInteger(Number(form.adults)) || Number(form.adults) < 1) e.adults = 'Au moins 1 adulte requis.'
     if (!Number.isInteger(Number(form.children)) || Number(form.children) < 0) e.children = 'Nombre d\'enfants invalide.'
+    if (selectedRoom && Number(form.adults) > selectedRoom.capacity) {
+      e.adults = `Maximum ${selectedRoom.capacity} adulte(s) pour cette chambre.`
+    }
+    if (selectedRoom && Number(form.adults) + Number(form.children) > selectedRoom.capacity) {
+      e.children = `La capacité maximale de cette chambre est de ${selectedRoom.capacity} personne(s).`
+    }
     if (!form.guestName.trim()) e.guestName = 'Nom requis.'
     if (!form.guestPhone.trim()) e.guestPhone = 'Téléphone requis.'
     if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) e.guestEmail = 'Email invalide.'
@@ -156,19 +184,52 @@ export default function BookingPage() {
                     label="Adultes *"
                     type="number"
                     min={1}
+                    max={selectedRoom ? selectedRoom.capacity : undefined}
                     value={form.adults}
-                    onChange={e => setForm(f => ({ ...f, adults: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    onChange={e => {
+                      const raw = e.target.value
+                      const value = raw === '' ? '' : Number(raw)
+                      setForm(prev => {
+                        let adults = value
+                        let children = Number(prev.children) || 0
+
+                        if (adults !== '' && selectedRoom) {
+                          adults = Math.max(1, Math.min(adults, selectedRoom.capacity))
+                          const maxChildren = Math.max(0, selectedRoom.capacity - adults)
+                          if (children > maxChildren) children = maxChildren
+                        }
+
+                        return { ...prev, adults, children }
+                      })
+                    }}
                     error={errors.adults}
                   />
                   <Input
                     label="Enfants"
                     type="number"
                     min={0}
+                    max={selectedRoom ? Math.max(0, roomCapacity - Number(form.adults || 0)) : undefined}
                     value={form.children}
-                    onChange={e => setForm(f => ({ ...f, children: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    onChange={e => {
+                      const raw = e.target.value
+                      const value = raw === '' ? '' : Number(raw)
+                      setForm(prev => {
+                        let children = value
+                        if (children !== '' && selectedRoom) {
+                          const maxChildren = Math.max(0, selectedRoom.capacity - Number(prev.adults || 1))
+                          children = Math.max(0, Math.min(children, maxChildren))
+                        }
+                        return { ...prev, children }
+                      })
+                    }}
                     error={errors.children}
                   />
                 </div>
+                {selectedRoom && (
+                  <p className="text-xs text-stone-500">
+                    Capacité maximale de cette chambre: <span className="font-semibold">{selectedRoom.capacity} personne(s)</span>.
+                  </p>
+                )}
               </div>
             </Card>
 
@@ -202,6 +263,7 @@ export default function BookingPage() {
                   <div>
                     <div className="font-medium text-stone-800">{selectedRoom.name}</div>
                     <div className="text-xs text-stone-400">{selectedRoom.capacity} pers. · {selectedRoom.size} m²</div>
+                    <div className="text-xs text-stone-500 mt-1">{Number(form.adults) || 0} adulte(s) · {Number(form.children) || 0} enfant(s)</div>
                   </div>
                   {nights > 0 && (
                     <>
