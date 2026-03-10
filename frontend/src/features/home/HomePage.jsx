@@ -21,6 +21,10 @@ export default function HomePage() {
           className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-stone-900/80 via-stone-900/50 to-transparent" />
+              <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                <div className="ambient-orb ambient-orb--amber animate-ambient-drift" />
+                <div className="ambient-orb ambient-orb--soft animate-ambient-drift-delayed" />
+              </div>
           </div>
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
             <div className="max-w-2xl">
@@ -161,6 +165,9 @@ export default function HomePage() {
       <section className="py-20 bg-primary-600 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 0%, transparent 60%)' }} />
+        </div>
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div className="cta-glow animate-ambient-pan" />
         </div>
         <div className="relative max-w-3xl mx-auto px-4 text-center">
           <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4">
