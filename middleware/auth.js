@@ -1,6 +1,7 @@
 
 const jwt=require('jsonwebtoken')
 const {StatusCodes}=require('http-status-codes')
+const User = require('../models/User');
  const auth=async(req,res,next)=>{
 
  if (!process.env.JWT_SECRET && !process.env.JWT_SCRT) {
@@ -11,25 +12,30 @@ if(!authHeader){
     return res.status(StatusCodes.UNAUTHORIZED).json({error:"INVALID AUTHORISATION"})
 }  
 const token=authHeader.split(' ')[1].trim()
+const jwtSecret = process.env.JWT_SECRET || process.env.JWT_SCRT;
    
 try {
-  const payload = jwt.verify(token,process.env.JWT_SCRT)
- const user = await User.findById(payload.id);
+  const payload = jwt.verify(token, jwtSecret)
+ const user = await User.findById(payload.userId);
+ if (!user) {
+    return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'User not found' });
+ }
 req.user=user
   next()
 } catch (error) {
-    return res.status(StatusCodes.UNAUTHORIZED).json({error:error})
+    return res.status(StatusCodes.UNAUTHORIZED).json({error:'Invalid or expired token'})
 }
 
 }
-const itsAdmin=async(req,res,next)=>{
- auth(req,res,()=>{
-  if(req.user.role==='admin'){
-    next();
-  }else{
-    return res.status(StatusCodes.FORBIDDEN).json({error:'your not admin'})
+const itsAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Authentication required' });
   }
 
- })
+  if (req.user.role !== 'admin') {
+    return res.status(StatusCodes.FORBIDDEN).json({ error: 'You are not admin' });
+  }
+
+  return next();
 }
 module.exports= {auth,itsAdmin}

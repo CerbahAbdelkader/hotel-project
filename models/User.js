@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const UserSchema = new mongoose.Schema({
   name: {
@@ -25,28 +26,24 @@ const UserSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 
-// تشفير كلمة المرور قبل الحفظ
-UserSchema.pre('save',async function(){
-  const salt = await bcrypt.genSalt(10)
-  const hashPass= await bcrypt.hash(this.password,salt)
-  this.password = hashPass;
+// Hash password only when it changes.
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
 })
 UserSchema.methods.createToken=function(){
-  if (!process.env.JWT_SCRT) {
+  const jwtSecret = process.env.JWT_SECRET || process.env.JWT_SCRT;
+  if (!jwtSecret) {
     throw new Error('JWT_SECRET is not defined in the environment variables.');
   }
   return (
-    jwt.sign({userId:this._id,name:this.name,email:this.email,role:this.role},process.env.JWT_SCRT, { expiresIn: '30d' })
+    jwt.sign({userId:this._id,name:this.name,email:this.email,role:this.role}, jwtSecret, { expiresIn: '30d' })
   )
 }
 UserSchema.methods.comparePassword=async function(password){
 const isMatched=await bcrypt.compare(password,this.password)
 return isMatched
 }
-module.exports=mongoose.model('User',UserSchema)
-// مقارنة كلمة المرور
-UserSchema.methods.comparePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
-};
-
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model('User', UserSchema);
