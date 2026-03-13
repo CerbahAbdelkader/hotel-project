@@ -1,48 +1,44 @@
 const express = require('express');
 const Booking = require('../models/Booking');
-const Room = require('../models/Room');
-const { auth } = require('../middleware/auth');
+const { auth, itsAdmin } = require('../middleware/auth');
 const router = express.Router();
 
-// إنشاء حجز جديد
-router.post('/', auth, async (req, res) => {
+router.get('/', auth, itsAdmin, async (req, res) => {
   try {
-    const { roomId, checkIn, checkOut } = req.body;
-
-    const room = await Room.findById(roomId);
-    if (!room || !room.available) {
-      return res.status(400).json({ msg: 'الغرفة غير متوفرة' });
-    }
-
-    const days = (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24);
-    const totalPrice = days * room.price;
-
-    const booking = new Booking({
-      user: req.user._id,
-      room: roomId,
-      checkIn,
-      checkOut,
-      totalPrice
-    });
-
-    room.available = false;
-    await room.save();
-    await booking.save();
-
-    res.status(201).json({ msg: 'تم الحجز بنجاح', booking });
-  } catch (error) {
-    res.status(500).json({ msg: 'خطأ في السيرفر' });
+    const bookings = await Booking.find().populate('user').populate('hotel');
+    res.json(bookings);
+  } catch {
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
-// حجوزات المستخدم الحالي
-router.get('/my-bookings', auth, async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id })
-      .populate('room', 'roomNumber type price');
-    res.json(bookings);
-  } catch (error) {
-    res.status(500).json({ msg: 'خطأ في السيرفر' });
+    const booking = new Booking({ ...req.body, user: req.user._id });
+    await booking.save();
+    res.status(201).json(booking);
+  } catch {
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('user').populate('hotel');
+    if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+    res.json(booking);
+  } catch {
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+router.delete('/:id', auth, itsAdmin, async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndDelete(req.params.id);
+    if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+    res.json({ msg: 'Booking deleted' });
+  } catch {
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
