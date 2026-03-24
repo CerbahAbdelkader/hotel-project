@@ -5,6 +5,7 @@ import Card from '../../shared/ui/Card'
 import Input from '../../shared/ui/Input'
 import Modal from '../../shared/ui/Modal'
 import { useBooking } from '../../context/BookingContext'
+import { apiEndpoint } from '../../utils/api'
 
 const eventTypes = [
   {
@@ -203,7 +204,8 @@ export default function EventsPage() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/event-reservations', {
+      // Use centralized API base URL for deployed backend requests.
+      const response = await fetch(apiEndpoint('/api/event-reservations'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

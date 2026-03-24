@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 import Button from '../../shared/ui/Button'
 import Input from '../../shared/ui/Input'
 import Card from '../../shared/ui/Card'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const { register, error, setError } = useAuth()
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
   const [errors, setErrors] = useState({})
@@ -23,14 +25,26 @@ export default function RegisterPage() {
     return Object.keys(e).length === 0
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validate()) return
     setLoading(true)
-    setTimeout(() => {
-      // In real app: call API to create user
+    setError(null)
+    try {
+      // Registration now targets backend API through centralized auth context.
+      const result = await register({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+      })
+
+      if (result.success) {
       navigate('/login', { state: { message: 'Compte créé ! Connectez-vous.' } })
-    }, 800)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const set = (key) => (e) => {
@@ -66,6 +80,7 @@ export default function RegisterPage() {
             </div>
             <Input label="Confirmer le mot de passe" type="password" placeholder="••••••••"
               value={form.confirm} onChange={set('confirm')} error={errors.confirm} />
+            {error && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
             <Button type="submit" className="w-full" loading={loading}>Créer mon compte</Button>
           </form>
           <div className="mt-4 text-center">

@@ -562,7 +562,7 @@ export const BOOKINGS = [
 ]
 
 export const USERS = [
-  {
+   {
     id: 1,
     name: 'Admin Hôtel',
     email: 'admin@hotel-saida.dz',

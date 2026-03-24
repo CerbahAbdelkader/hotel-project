@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
+const net = require('net');
 require('dotenv').config();
 const ConnectDB = require('./database/connect')
 const authRoutes = require('./routes/user');
@@ -38,17 +39,48 @@ app.get('/api/test', (req, res) => {
 });
 
 // الاتصال بقاعدة البيانات
+const DEFAULT_PORT = Number(process.env.PORT) || 3000;
 
+// Return true when a port is available for binding.
+const isPortAvailable = (port) => new Promise((resolve) => {
+  const tester = net.createServer();
 
+  tester.once('error', (err) => {
+    if (err.code === 'EADDRINUSE' || err.code === 'EACCES') {
+      resolve(false);
+      return;
+    }
+    resolve(false);
+  });
 
+  tester.once('listening', () => {
+    tester.close(() => resolve(true));
+  });
 
-const PORT = process.env.PORT || 3000;
+  // Use Node/Express default bind behavior (usually ::) to avoid false positives on Windows.
+  tester.listen(port);
+});
+
+// Find the next free port starting from the configured default.
+const findAvailablePort = async (startPort) => {
+  let port = startPort;
+  while (!(await isPortAvailable(port))) {
+    port += 1;
+  }
+  return port;
+};
 
 const Start = async () => {
   try {
     await ConnectDB(process.env.MONGO_URI);
-    app.listen(PORT, () => {
-      console.log(`🚀 Server is listening on port ${PORT}`);
+    const port = await findAvailablePort(DEFAULT_PORT);
+
+    if (port !== DEFAULT_PORT) {
+      console.warn(`⚠️ Port ${DEFAULT_PORT} is in use. Falling back to port ${port}.`);
+    }
+
+    app.listen(port, () => {
+      console.log(`🚀 Server is listening on port ${port}`);
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err.message);

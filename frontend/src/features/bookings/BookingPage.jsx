@@ -18,7 +18,7 @@ export default function BookingPage() {
   const availableRooms = rooms.filter(r => r.available)
 
   const [form, setForm] = useState({
-    roomId: preselectedRoomId ? Number(preselectedRoomId) : '',
+    roomId: preselectedRoomId || '',
     checkIn: '',
     checkOut: '',
     adults: 1,
@@ -31,6 +31,7 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [submitFeedback, setSubmitFeedback] = useState(null)
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function BookingPage() {
     }
   }, [submitted])
 
-  const selectedRoom = rooms.find(r => r.id === Number(form.roomId))
+  const selectedRoom = rooms.find(r => String(r.id) === String(form.roomId))
   const roomCapacity = selectedRoom?.capacity || 0
   const nights = form.checkIn && form.checkOut ? calcNights(form.checkIn, form.checkOut) : 0
   const total = selectedRoom && nights > 0 ? selectedRoom.price * nights : 0
@@ -93,13 +94,15 @@ export default function BookingPage() {
     return Object.keys(e).length === 0
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return
     setLoading(true)
-    setTimeout(() => {
-      const result = createBooking({
+    setSubmitFeedback(null)
+    try {
+      // Submit booking through API-backed BookingContext while keeping same UI flow.
+      const result = await createBooking({
         userId: user?.id || 0,
-        roomId: Number(form.roomId),
+        roomId: form.roomId,
         adults: Number(form.adults),
         children: Number(form.children),
         guestName: form.guestName,
@@ -109,9 +112,17 @@ export default function BookingPage() {
         checkOut: form.checkOut,
         notes: form.notes,
       })
-      if (result.success) setSubmitted(true)
+      if (result.success) {
+        setSubmitFeedback({ type: 'success', message: result.message || 'Reservation envoyee avec succes.' })
+        setSubmitted(true)
+      } else {
+        setSubmitFeedback({ type: 'error', message: result.message || 'La reservation a echoue.' })
+      }
+    } catch {
+      setSubmitFeedback({ type: 'error', message: 'Une erreur inattendue est survenue.' })
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   const today = new Date().toISOString().split('T')[0]
@@ -143,6 +154,12 @@ export default function BookingPage() {
           <h1 className="font-display text-4xl font-bold text-stone-800">Réserver une chambre</h1>
           <p className="text-stone-500 mt-3">Remplissez le formulaire ci-dessous. Paiement à l'arrivée — aucune carte requise.</p>
         </div>
+
+        {submitFeedback && (
+          <div className={`border rounded-xl p-4 mb-6 ${submitFeedback.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            <p className="text-sm">{submitFeedback.message}</p>
+          </div>
+        )}
 
         {!isLoggedIn && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">

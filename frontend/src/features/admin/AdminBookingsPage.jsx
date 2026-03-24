@@ -11,6 +11,36 @@ export default function AdminBookingsPage() {
   const { bookings, eventReservations, changeBookingStatus, markAsPaid, markAsUnpaid, deleteBooking } = useBooking()
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState({ status: 'all', payment: 'all', search: '' })
+  const [actionNotice, setActionNotice] = useState(null)
+
+  const showActionNotice = (type, message) => {
+    setActionNotice({ type, message })
+    setTimeout(() => setActionNotice(null), 3500)
+  }
+
+  const handleStatusChange = async (bookingId, status) => {
+    // Show immediate feedback when backend status sync succeeds/fails.
+    const result = await changeBookingStatus(bookingId, status)
+    if (result?.success) {
+      showActionNotice('success', 'Statut de reservation mis a jour.')
+      setSelected(null)
+    } else {
+      showActionNotice('error', result?.message || 'Mise a jour du statut echouee.')
+    }
+  }
+
+  const handlePaymentChange = async (bookingId, paymentStatus) => {
+    const result = paymentStatus === 'paid'
+      ? await markAsPaid(bookingId)
+      : await markAsUnpaid(bookingId)
+
+    if (result?.success) {
+      showActionNotice('success', 'Statut de paiement mis a jour.')
+      setSelected(null)
+    } else {
+      showActionNotice('error', result?.message || 'Mise a jour du paiement echouee.')
+    }
+  }
 
   const filtered = bookings.filter(b => {
     if (filter.status !== 'all' && b.status !== filter.status) return false
@@ -26,6 +56,14 @@ export default function AdminBookingsPage() {
         <h1 className="font-display text-2xl font-bold text-stone-800">Réservations</h1>
         <p className="text-stone-500 text-sm mt-1">{bookings.length} réservation(s) au total</p>
       </div>
+
+      {actionNotice && (
+        <Card className={`p-3 mb-4 border ${actionNotice.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+          <p className={`text-sm ${actionNotice.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+            {actionNotice.message}
+          </p>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card className="p-4 mb-5">
@@ -137,17 +175,17 @@ export default function AdminBookingsPage() {
                 <div className="text-xs font-semibold text-stone-500 mb-2">Changer le statut</div>
                 <div className="flex gap-2 flex-wrap">
                   {selected.status !== 'pending' && (
-                    <Button size="sm" variant="secondary" onClick={() => { changeBookingStatus(selected.id, 'pending'); setSelected(null) }}>
+                    <Button size="sm" variant="secondary" onClick={() => handleStatusChange(selected.id, 'pending')}>
                       <Clock size={14} /> En attente
                     </Button>
                   )}
                   {selected.status !== 'approved' && (
-                    <Button size="sm" variant="success" onClick={() => { changeBookingStatus(selected.id, 'approved'); setSelected(null) }}>
+                    <Button size="sm" variant="success" onClick={() => handleStatusChange(selected.id, 'approved')}>
                       <CheckCircle size={14} /> Approuver
                     </Button>
                   )}
                   {selected.status !== 'rejected' && (
-                    <Button size="sm" variant="danger" onClick={() => { changeBookingStatus(selected.id, 'rejected'); setSelected(null) }}>
+                    <Button size="sm" variant="danger" onClick={() => handleStatusChange(selected.id, 'rejected')}>
                       <XCircle size={14} /> Refuser
                     </Button>
                   )}
@@ -159,12 +197,12 @@ export default function AdminBookingsPage() {
                 <div className="text-xs font-semibold text-stone-500 mb-2">Paiement</div>
                 <div className="flex gap-2 flex-wrap">
                   {selected.paymentStatus !== 'paid' && (
-                    <Button size="sm" onClick={() => { markAsPaid(selected.id); setSelected(null) }}>
+                    <Button size="sm" onClick={() => handlePaymentChange(selected.id, 'paid')}>
                       <DollarSign size={14} /> Marquer comme payée
                     </Button>
                   )}
                   {selected.paymentStatus !== 'unpaid' && (
-                    <Button size="sm" variant="secondary" onClick={() => { markAsUnpaid(selected.id); setSelected(null) }}>
+                    <Button size="sm" variant="secondary" onClick={() => handlePaymentChange(selected.id, 'unpaid')}>
                       <RefreshCw size={14} /> Marquer comme non payée
                     </Button>
                   )}

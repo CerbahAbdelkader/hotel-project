@@ -10,7 +10,8 @@ export default function RoomDetailPage() {
   const { id } = useParams()
   const { rooms } = useBooking()
   const navigate = useNavigate()
-  const room = rooms.find(r => r.id === Number(id))
+  // Compare as strings so Mongo ObjectId and numeric mock IDs both work.
+  const room = rooms.find(r => String(r.id) === String(id))
 
   // Scroll to top when page loads or room changes
   useEffect(() => {

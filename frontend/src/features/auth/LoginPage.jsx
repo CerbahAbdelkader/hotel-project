@@ -16,16 +16,18 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => {
-      const result = login(form.email, form.password)
+    try {
+      // Login now calls backend auth API through AuthContext.
+      const result = await login(form.email, form.password)
       if (result.success) {
         navigate(result.role === 'admin' ? '/admin/dashboard' : from)
       }
+    } finally {
       setLoading(false)
-    }, 600)
+    }
   }
 
   return (

@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import { USERS } from '../data/mockData'
+import { createContext, useContext, useState } from 'react'
+import { apiRequest, clearAuthToken, setAuthToken } from '../utils/api'
 
 const AuthContext = createContext(null)
 
@@ -12,30 +12,73 @@ export function AuthProvider({ children }) {
   })
   const [error, setError] = useState(null)
 
-  const login = (email, password) => {
-    const normalizedEmail = email.trim().toLowerCase()
-    const found = USERS.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password)
-    if (found) {
-      const { password: _, ...safeUser } = found
+  const login = async (email, password) => {
+    try {
+      // Authenticate against backend so frontend session mirrors server-side users/roles.
+      const data = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: {
+          email: email.trim().toLowerCase(),
+          password,
+        },
+      })
+
+      const safeUser = data?.user
+      if (!safeUser) {
+        setError('Réponse serveur invalide.')
+        return { success: false }
+      }
+
+      if (data?.token) setAuthToken(data.token)
+
       setUser(safeUser)
       localStorage.setItem('hotel_user', JSON.stringify(safeUser))
       setError(null)
       return { success: true, role: safeUser.role }
+    } catch (err) {
+      setError(err.message || 'Email ou mot de passe incorrect.')
+      return { success: false }
     }
-    setError('Email ou mot de passe incorrect.')
-    return { success: false }
+  }
+
+  const register = async ({ name, email, phone, password }) => {
+    try {
+      // Create user in backend to keep registration and login fully connected.
+      const data = await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          password,
+        },
+      })
+
+      if (data?.token) setAuthToken(data.token)
+
+      // Keep UX consistent: register then redirect user to login page.
+      clearAuthToken()
+      setUser(null)
+      localStorage.removeItem('hotel_user')
+      setError(null)
+      return { success: true }
+    } catch (err) {
+      setError(err.message || 'Inscription impossible.')
+      return { success: false }
+    }
   }
 
   const logout = () => {
     setUser(null)
     localStorage.removeItem('hotel_user')
+    clearAuthToken()
   }
 
   const isAdmin = user?.role === 'admin'
   const isLoggedIn = !!user
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, isLoggedIn, error, setError }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isAdmin, isLoggedIn, error, setError }}>
       {children}
     </AuthContext.Provider>
   )

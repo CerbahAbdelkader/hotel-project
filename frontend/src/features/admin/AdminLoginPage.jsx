@@ -12,18 +12,20 @@ export default function AdminLoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => {
-      const result = login(form.email, form.password)
+    try {
+      // Admin login now reuses backend-authenticated login context.
+      const result = await login(form.email, form.password)
       if (result.success && result.role === 'admin') {
         navigate('/admin/dashboard')
       } else if (result.success) {
         setError('Accès réservé aux administrateurs.')
       }
+    } finally {
       setLoading(false)
-    }, 600)
+    }
   }
 
   return (
