@@ -750,6 +750,13 @@ export const EVENT_STEPS = [
   { icon: '✅', title: 'Confirmation de votre evenement' },
 ]
 
+export const EVENTS_CONTENT = {
+  types: EVENTS,
+  halls: EVENT_HALLS,
+  packages: EVENT_PACKAGES,
+  steps: EVENT_STEPS,
+}
+
 export const EVENT_RESERVATIONS = [
   {
     id: 'EV-001',

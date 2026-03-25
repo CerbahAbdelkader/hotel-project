@@ -6,7 +6,7 @@ import Input from '../../shared/ui/Input'
 import Modal from '../../shared/ui/Modal'
 import { useBooking } from '../../context/BookingContext'
 import { apiEndpoint } from '../../utils/api'
-import { EVENTS_CONTENT } from '../../data/mockData'
+import * as mockData from '../../data/mockData'
 
 const iconByName = {
   HeartHandshake,
@@ -15,14 +15,21 @@ const iconByName = {
   Users,
 }
 
-const eventTypes = EVENTS_CONTENT.types.map((item) => ({
+const safeEventContent = {
+  types: mockData.EVENTS_CONTENT?.types || mockData.EVENTS || mockData.EVENT_TYPES || [],
+  halls: mockData.EVENTS_CONTENT?.halls || mockData.EVENT_HALLS || [],
+  packages: mockData.EVENTS_CONTENT?.packages || mockData.EVENT_PACKAGES || [],
+  steps: mockData.EVENTS_CONTENT?.steps || mockData.EVENT_STEPS || [],
+}
+
+const eventTypes = safeEventContent.types.map((item) => ({
   ...item,
   icon: iconByName[item.icon] || Sparkles,
 }))
 
-const halls = EVENTS_CONTENT.halls
-const packages = EVENTS_CONTENT.packages
-const steps = EVENTS_CONTENT.steps
+const halls = safeEventContent.halls
+const packages = safeEventContent.packages
+const steps = safeEventContent.steps
 
 export default function EventsPage() {
   const { createEventReservation } = useBooking()
