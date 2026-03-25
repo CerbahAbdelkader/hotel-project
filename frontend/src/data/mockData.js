@@ -665,3 +665,118 @@ export const SERVICES = [
     description: 'Nichée au cœur de Saïda, notre hôtel offre un havre de paix loin de l\'agitation, idéal pour se ressourcer.',
   },
 ]
+
+export const EVENTS = [
+  {
+    id: 1,
+    key: 'Mariage',
+    title: 'Mariages',
+    description: 'Celebrez votre union dans un cadre raffine avec une organisation sur mesure.',
+    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
+    icon: 'HeartHandshake',
+  },
+  {
+    id: 2,
+    key: 'Conference',
+    title: 'Conferences',
+    description: 'Des espaces professionnels avec equipement moderne pour vos evenements business.',
+    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1000&q=80',
+    icon: 'Briefcase',
+  },
+  {
+    id: 3,
+    key: 'Anniversaire',
+    title: 'Anniversaires',
+    description: 'Offrez a vos invites une ambiance chaleureuse et une experience memorable.',
+    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1000&q=80',
+    icon: 'Cake',
+  },
+  {
+    id: 4,
+    key: "Evenement d'entreprise",
+    title: "Evenements d'entreprise",
+    description: 'Lancements, galas et seminaires avec une qualite de service haut de gamme.',
+    image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1000&q=80',
+    icon: 'Users',
+  },
+]
+
+// Backward-compatible alias used by older imports.
+export const EVENT_TYPES = EVENTS
+
+export const EVENT_HALLS = [
+  {
+    name: 'Salle Royale',
+    capacity: '300 personnes',
+    description: 'Une salle majestueuse ideale pour les grands mariages et receptions prestigieuses.',
+    image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1100&q=80',
+  },
+  {
+    name: 'Salle Conference Prestige',
+    capacity: '120 personnes',
+    description: 'Un espace equipe pour reunions professionnelles, conferences et workshops.',
+    image: 'https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=1100&q=80',
+  },
+  {
+    name: 'Salle Banquet Elegance',
+    capacity: '200 personnes',
+    description: 'Le compromis parfait entre standing et convivialite pour vos celebrations.',
+    image: 'https://images.unsplash.com/photo-1478146059778-26028b07395a?w=1100&q=80',
+  },
+]
+
+export const EVENT_PACKAGES = [
+  {
+    title: 'Forfait Mariage',
+    icon: '💍',
+    items: ['Decoration complete', 'Service traiteur', 'Salle de reception', "Coordination de l'evenement"],
+  },
+  {
+    title: 'Forfait Conference',
+    icon: '🎤',
+    items: ['Salle equipee', 'Projecteur et ecran', 'WiFi haut debit', 'Pause cafe'],
+  },
+  {
+    title: 'Forfait Anniversaire',
+    icon: '🎉',
+    items: ['Decoration festive', 'Gateau personnalise', 'Musique', 'Service traiteur'],
+  },
+]
+
+export const EVENT_STEPS = [
+  { icon: '📌', title: "Choisissez votre type d'evenement" },
+  { icon: '📝', title: 'Remplissez le formulaire de reservation' },
+  { icon: '📞', title: 'Notre equipe vous contacte' },
+  { icon: '✅', title: 'Confirmation de votre evenement' },
+]
+
+export const EVENT_RESERVATIONS = [
+  {
+    id: 'EV-001',
+    clientName: 'Samir Bensaid',
+    email: 'samir.bensaid@email.com',
+    phone: '0551122334',
+    eventType: 'Mariage',
+    guests: 180,
+    startDate: '2026-06-12',
+    endDate: '2026-06-12',
+    services: ['Traiteur', 'Decoration', 'Photographie'],
+    message: 'Nous souhaitons une ambiance elegante et florale.',
+    status: 'pending',
+    createdAt: '2026-03-01T10:30:00',
+  },
+  {
+    id: 'EV-002',
+    clientName: 'Nourredine Amrani',
+    email: 'n.amrani@company.dz',
+    phone: '0662233445',
+    eventType: 'Conference',
+    guests: 90,
+    startDate: '2026-04-20',
+    endDate: '2026-04-21',
+    services: ['Projecteur', 'Sonorisation', 'Pause cafe'],
+    message: 'Conference sur deux jours avec sessions ateliers.',
+    status: 'approved',
+    createdAt: '2026-02-18T14:15:00',
+  },
+]

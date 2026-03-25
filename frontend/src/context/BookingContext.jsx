@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { BOOKINGS, ROOMS as INITIAL_ROOMS, USERS as INITIAL_USERS } from '../data/mockData'
+import { BOOKINGS, ROOMS as INITIAL_ROOMS, USERS as INITIAL_USERS, EVENT_RESERVATIONS as INITIAL_EVENT_RESERVATIONS } from '../data/mockData'
 import { calcNights } from '../utils/formatters'
 import { apiRequest, getAuthToken } from '../utils/api'
 import { useAuth } from './AuthContext'
@@ -99,7 +99,7 @@ export function BookingProvider({ children }) {
   const [rooms, setRooms] = useState(INITIAL_ROOMS)
   const [users, setUsers] = useState(INITIAL_USERS)
   const [hotels, setHotels] = useState([])
-  const [eventReservations, setEventReservations] = useState([])
+  const [eventReservations, setEventReservations] = useState(INITIAL_EVENT_RESERVATIONS)
 
   useEffect(() => {
     let mounted = true

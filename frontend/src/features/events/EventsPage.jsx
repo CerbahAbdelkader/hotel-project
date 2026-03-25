@@ -6,83 +6,23 @@ import Input from '../../shared/ui/Input'
 import Modal from '../../shared/ui/Modal'
 import { useBooking } from '../../context/BookingContext'
 import { apiEndpoint } from '../../utils/api'
+import { EVENTS_CONTENT } from '../../data/mockData'
 
-const eventTypes = [
-  {
-    key: 'Mariage',
-    title: 'Mariages',
-    description: 'Célébrez votre union dans un cadre raffiné avec une organisation sur mesure.',
-    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1000&q=80',
-    icon: HeartHandshake,
-  },
-  {
-    key: 'Conférence',
-    title: 'Conférences',
-    description: 'Des espaces professionnels avec équipement moderne pour vos événements business.',
-    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1000&q=80',
-    icon: Briefcase,
-  },
-  {
-    key: 'Anniversaire',
-    title: 'Anniversaires',
-    description: 'Offrez à vos invités une ambiance chaleureuse et une expérience mémorable.',
-    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1000&q=80',
-    icon: Cake,
-  },
-  {
-    key: "Événement d'entreprise",
-    title: "Événements d'entreprise",
-    description: 'Lancements, galas et séminaires avec une qualité de service haut de gamme.',
-    image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1000&q=80',
-    icon: Users,
-  },
-]
+const iconByName = {
+  HeartHandshake,
+  Briefcase,
+  Cake,
+  Users,
+}
 
-const halls = [
-  {
-    name: 'Salle Royale',
-    capacity: '300 personnes',
-    description: 'Une salle majestueuse idéale pour les grands mariages et réceptions prestigieuses.',
-    image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1100&q=80',
-  },
-  {
-    name: 'Salle Conférence Prestige',
-    capacity: '120 personnes',
-    description: 'Un espace équipé pour réunions professionnelles, conférences et workshops.',
-    image: 'https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=1100&q=80',
-  },
-  {
-    name: 'Salle Banquet Élégance',
-    capacity: '200 personnes',
-    description: 'Le compromis parfait entre standing et convivialité pour vos célébrations.',
-    image: 'https://images.unsplash.com/photo-1478146059778-26028b07395a?w=1100&q=80',
-  },
-]
+const eventTypes = EVENTS_CONTENT.types.map((item) => ({
+  ...item,
+  icon: iconByName[item.icon] || Sparkles,
+}))
 
-const packages = [
-  {
-    title: 'Forfait Mariage',
-    icon: '💍',
-    items: ['Décoration complète', 'Service traiteur', 'Salle de réception', "Coordination de l'événement"],
-  },
-  {
-    title: 'Forfait Conférence',
-    icon: '🎤',
-    items: ['Salle équipée', 'Projecteur et écran', 'WiFi haut débit', 'Pause café'],
-  },
-  {
-    title: 'Forfait Anniversaire',
-    icon: '🎉',
-    items: ['Décoration festive', 'Gâteau personnalisé', 'Musique', 'Service traiteur'],
-  },
-]
-
-const steps = [
-  { icon: '📌', title: "Choisissez votre type d'événement" },
-  { icon: '📝', title: 'Remplissez le formulaire de réservation' },
-  { icon: '📞', title: 'Notre équipe vous contacte' },
-  { icon: '✅', title: 'Confirmation de votre événement' },
-]
+const halls = EVENTS_CONTENT.halls
+const packages = EVENTS_CONTENT.packages
+const steps = EVENTS_CONTENT.steps
 
 export default function EventsPage() {
   const { createEventReservation } = useBooking()
