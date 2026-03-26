@@ -95,11 +95,11 @@ export default function LoginPage() {
             </div>
           </Card>
 
-          <div className="mt-5 bg-stone-100 rounded-xl p-4 text-xs text-stone-500">
+          {/* <div className="mt-5 bg-stone-100 rounded-xl p-4 text-xs text-stone-500">
             <p className="font-semibold mb-1">Comptes de démonstration :</p>
             <p>Admin: admin@hotel-saida.dz / admin123</p>
             <p>Client: mbenali@email.com / user123</p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

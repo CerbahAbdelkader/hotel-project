@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Search, UserPlus } from 'lucide-react'
+import { Plus, Trash2, Search, UserPlus, RotateCw } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
 import { formatDateTime } from '../../utils/formatters'
 import Button from '../../shared/ui/Button'
@@ -10,11 +10,13 @@ import Card from '../../shared/ui/Card'
 const emptyUser = { name: '', email: '', phone: '', password: '' }
 
 export default function AdminUsersPage() {
-  const { users, addUser, deleteUser, bookings } = useBooking()
+  const { users, addUser, deleteUser, bookings, refetchUsers } = useBooking()
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(emptyUser)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [search, setSearch] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState(null)
 
   const regularUsers = users.filter(u => u.role !== 'admin')
   const filtered = regularUsers.filter(u =>
@@ -25,6 +27,24 @@ export default function AdminUsersPage() {
   const getUserBookings = (userId) => bookings.filter(b => b.userId === userId).length
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    setRefreshMessage(null)
+    try {
+      const result = await refetchUsers()
+      if (result.success) {
+        setRefreshMessage({ type: 'success', text: `✓ ${result.userCount} utilisateur(s) chargé(s)` })
+      } else {
+        setRefreshMessage({ type: 'error', text: `✗ Erreur: ${result.message}` })
+      }
+    } catch (error) {
+      setRefreshMessage({ type: 'error', text: '✗ Erreur lors du rafraîchissement' })
+    } finally {
+      setRefreshing(false)
+      setTimeout(() => setRefreshMessage(null), 3000)
+    }
+  }
 
   const handleAdd = () => {
     if (!form.name || !form.email) return
@@ -40,10 +60,21 @@ export default function AdminUsersPage() {
           <h1 className="font-display text-2xl font-bold text-stone-800">Utilisateurs</h1>
           <p className="text-stone-500 text-sm mt-1">{regularUsers.length} client(s) enregistré(s)</p>
         </div>
-        <Button onClick={() => { setForm(emptyUser); setModalOpen(true) }}>
-          <UserPlus size={16} /> Créer un client
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
+            <RotateCw size={16} className={refreshing ? 'animate-spin' : ''} /> Rafraîchir
+          </Button>
+          <Button onClick={() => { setForm(emptyUser); setModalOpen(true) }}>
+            <UserPlus size={16} /> Créer un client
+          </Button>
+        </div>
       </div>
+
+      {refreshMessage && (
+        <div className={`px-4 py-2 mb-4 rounded-lg text-sm font-medium ${refreshMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {refreshMessage.text}
+        </div>
+      )}
 
       {/* Search */}
       <Card className="p-4 mb-5">

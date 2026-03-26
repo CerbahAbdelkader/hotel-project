@@ -253,30 +253,6 @@ export function BookingProvider({ children }) {
     if (!room) return { success: false, message: 'Chambre introuvable.' }
     let backendRoomId = room.backendId || room.id
 
-    const allowGuestMockFallback = false
-
-    // Reservation API requires authenticated user token.
-    if (!isLoggedIn || !getAuthToken()) {
-      if (!allowGuestMockFallback) {
-        return { success: false, message: 'Please login first' }
-      }
-
-      // Optional compatibility fallback for mock-only flows.
-      const nights = calcNights(data.checkIn, data.checkOut)
-      const newBooking = {
-        id: 'BK-' + String(bookings.length + 1).padStart(3, '0'),
-        ...data,
-        roomName: room.name,
-        nights,
-        totalPrice: room.price * nights,
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        createdAt: new Date().toISOString(),
-      }
-      setBookings(prev => [...prev, newBooking])
-      return { success: true, booking: newBooking, message: 'Reservation created locally.' }
-    }
-
     try {
       if (!backendRoomId || !/^[a-f\d]{24}$/i.test(String(backendRoomId))) {
         // Auto-recover by resolving the Mongo room id from backend room list.
@@ -312,10 +288,19 @@ export function BookingProvider({ children }) {
         checkOut: data.checkOut,
       }
 
-      // Create booking in backend when user is authenticated.
+      // Add guest info for non-authenticated guests, or user context will be used
+      if (!isLoggedIn) {
+        requestBody.guestName = data.guestName
+        requestBody.guestPhone = data.guestPhone
+        if (data.guestEmail) {
+          requestBody.guestEmail = data.guestEmail
+        }
+      }
+
+      // Create booking through API - works for both authenticated users and guests
       const result = await apiRequest('/api/bookings', {
         method: 'POST',
-        withAuth: true,
+        withAuth: isLoggedIn,
         body: requestBody,
       })
 
@@ -347,6 +332,29 @@ export function BookingProvider({ children }) {
     }
     setEventReservations(prev => [...prev, newReservation])
     return { success: true, reservation: newReservation }
+  }
+
+  const refetchUsers = async () => {
+    if (!isAdmin || !getAuthToken()) {
+      return { success: false, message: 'Admin access required' }
+    }
+
+    try {
+      const usersData = await apiRequest('/api/auth/allUsers', { withAuth: true })
+      const backendUsers = (usersData?.users || []).map(u => ({
+        id: u._id || u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        role: u.role || 'user',
+        createdAt: u.createdAt,
+      }))
+      
+      setUsers(backendUsers)
+      return { success: true, userCount: backendUsers.length }
+    } catch (error) {
+      return { success: false, message: error.message || 'Failed to refresh users' }
+    }
   }
 
   const deleteBooking = async (id) => {
@@ -403,10 +411,15 @@ export function BookingProvider({ children }) {
           withAuth: true,
           body: {
             roomNumber: updates.roomNumber || existingRoom.roomNumber,
+            name: updates.name || existingRoom.name,
             type: toBackendRoomType(updates.type || existingRoom.type),
             price: Number(updates.price ?? existingRoom.price),
             available: updates.available ?? existingRoom.available,
             maxGuests: Number(updates.capacity ?? existingRoom.capacity),
+            size: Number(updates.size ?? existingRoom.size),
+            floor: Number(updates.floor ?? existingRoom.floor),
+            description: updates.description || existingRoom.description,
+            image: updates.image || existingRoom.image,
           },
         })
 
@@ -506,7 +519,7 @@ export function BookingProvider({ children }) {
       bookings, eventReservations, rooms, users,
       approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, createEventReservation, deleteBooking,
       addRoom, updateRoom, deleteRoom, toggleRoomAvailability,
-      addUser, deleteUser,
+      addUser, deleteUser, refetchUsers,
       stats,
     }}>
       {children}

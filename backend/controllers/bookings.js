@@ -64,8 +64,8 @@ const createBooking = async (req, res) => {
 
     const booking = await Booking.create(bookingData);
 
-    room.available = false;
-    await room.save();
+    // Update only availability to avoid failing on unrelated legacy room field validation.
+    await Room.findByIdAndUpdate(roomId, { available: false });
 
     return res.status(StatusCodes.CREATED).json({ message: 'Booking created successfully', booking });
   } catch (error) {
