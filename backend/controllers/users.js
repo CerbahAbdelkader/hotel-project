@@ -13,6 +13,12 @@ const login=async(req,res)=>{
     if(!isMatched){
         return res.status(StatusCodes.UNAUTHORIZED).json({message:'password is not correct'})
     }
+
+    // Persist login activity so successful logins are recorded in DB.
+    user.lastLoginAt = new Date()
+    user.loginCount = (user.loginCount || 0) + 1
+    await user.save()
+
     const token=user.createToken()
 
     const { password: _, ...safeUser } = user._doc;

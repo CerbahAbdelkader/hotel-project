@@ -22,6 +22,14 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     default: "user"
+  },
+  lastLoginAt: {
+    type: Date,
+    default: null
+  },
+  loginCount: {
+    type: Number,
+    default: 0
   }
 }, { timestamps: true });
 
