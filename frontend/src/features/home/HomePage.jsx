@@ -1,15 +1,74 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Star, BedDouble, UtensilsCrossed, Wifi, Clock, Users, Leaf, MapPin, ChevronRight } from 'lucide-react'
+import { ArrowRight, Star, BedDouble, UtensilsCrossed, Wifi, Clock, Users, Leaf, MapPin, ChevronRight, ChevronLeft, CalendarDays, Briefcase, Cake, HeartHandshake } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
 import { formatDZD } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
+import { EVENTS as EVENT_TYPES } from '../../data/mockData'
 
-const serviceIcons = { BedDouble, UtensilsCrossed, Wifi, Clock, Users, Leaf }
+const eventIcons = { HeartHandshake, Briefcase, Cake, Users }
 
 export default function HomePage() {
   const { rooms } = useBooking()
   const featured = rooms.filter(r => r.featured).slice(0, 3)
+  const sliderEvents = useMemo(() => EVENT_TYPES.slice(0, 4), [])
+  const [currentEvent, setCurrentEvent] = useState(0)
+  const [isEventSliderPaused, setIsEventSliderPaused] = useState(false)
+  const swipeStartXRef = useRef(null)
+  const swipeStartYRef = useRef(null)
+  const wheelLockRef = useRef(false)
+
+  useEffect(() => {
+    if (isEventSliderPaused || sliderEvents.length <= 1) return undefined
+
+    const intervalId = setInterval(() => {
+      setCurrentEvent((prev) => (prev + 1) % sliderEvents.length)
+    }, 4500)
+
+    return () => clearInterval(intervalId)
+  }, [isEventSliderPaused, sliderEvents.length])
+
+  const goToEvent = (index) => setCurrentEvent(index)
+  const goToNextEvent = () => setCurrentEvent((prev) => (prev + 1) % sliderEvents.length)
+  const goToPrevEvent = () => setCurrentEvent((prev) => (prev - 1 + sliderEvents.length) % sliderEvents.length)
+  const toEventBookingPath = (eventKey) => `/events?reserve=1&eventType=${encodeURIComponent(eventKey)}`
+
+  const handleSwipeStart = (clientX, clientY) => {
+    swipeStartXRef.current = clientX
+    swipeStartYRef.current = clientY
+  }
+
+  const handleSwipeEnd = (clientX, clientY) => {
+    if (swipeStartXRef.current === null) return
+
+    const deltaX = clientX - swipeStartXRef.current
+    const deltaY = clientY - (swipeStartYRef.current ?? clientY)
+    const swipeThreshold = 50
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY)
+
+    if (isHorizontalSwipe && deltaX > swipeThreshold) goToPrevEvent()
+    if (isHorizontalSwipe && deltaX < -swipeThreshold) goToNextEvent()
+
+    swipeStartXRef.current = null
+    swipeStartYRef.current = null
+  }
+
+  const handleWheelSlide = (e) => {
+    if (sliderEvents.length <= 1 || wheelLockRef.current) return
+
+    // React only to horizontal wheel/trackpad gestures inside the slider.
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+    if (Math.abs(e.deltaX) < 20) return
+
+    wheelLockRef.current = true
+    if (e.deltaX > 0) goToNextEvent()
+    else goToPrevEvent()
+
+    setTimeout(() => {
+      wheelLockRef.current = false
+    }, 450)
+  }
 
   return (
     <div>
@@ -157,6 +216,107 @@ export default function HomePage() {
                 Toutes nos chambres <ArrowRight size={18} />
               </Button>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Events highlight */}
+      <section className="py-20 bg-gradient-to-b from-white to-warm-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
+            <div>
+              <p className="text-primary-600 text-sm font-semibold uppercase tracking-wider mb-2">Événements</p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-800">Vos moments importants, parfaitement organisés</h2>
+              <p className="text-stone-500 mt-3 max-w-2xl">
+                Mariages, anniversaires et événements professionnels dans des espaces élégants, avec une équipe dédiée du premier contact jusqu'au jour J.
+              </p>
+            </div>
+            <Link to="/events" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+              <Button variant="outline">Voir tous les événements <ChevronRight size={16} /></Button>
+            </Link>
+          </div>
+
+          <div
+            className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl"
+            onMouseEnter={() => setIsEventSliderPaused(true)}
+            onMouseLeave={() => {
+              setIsEventSliderPaused(false)
+              swipeStartXRef.current = null
+              swipeStartYRef.current = null
+            }}
+            onMouseDown={(e) => handleSwipeStart(e.clientX, e.clientY)}
+            onMouseUp={(e) => handleSwipeEnd(e.clientX, e.clientY)}
+            onTouchStart={(e) => handleSwipeStart(e.touches[0].clientX, e.touches[0].clientY)}
+            onTouchEnd={(e) => handleSwipeEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY)}
+            onWheel={handleWheelSlide}
+          >
+            <div
+              className="flex transition-transform duration-700 ease-out"
+              style={{ transform: `translateX(-${currentEvent * 100}%)` }}
+            >
+              {sliderEvents.map((event) => {
+                const Icon = eventIcons[event.icon] || CalendarDays
+                return (
+                  <div key={event.id} className="min-w-full">
+                    <div className="grid grid-cols-1 lg:grid-cols-2">
+                      <div className="relative h-72 lg:h-full min-h-[320px]">
+                        <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/70 via-stone-900/25 to-transparent" />
+                        <div className="absolute left-6 bottom-6 flex items-center gap-3 text-white">
+                          <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                            <Icon size={20} />
+                          </div>
+                          <span className="font-display text-2xl font-semibold">{event.title}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-8 lg:p-10 flex flex-col justify-center bg-gradient-to-br from-white to-warm-50">
+                        <p className="text-primary-700 text-xs font-semibold uppercase tracking-wider mb-3">Événement sur mesure</p>
+                        <h3 className="font-display text-3xl font-bold text-stone-800 mb-4">{event.title}</h3>
+                        <p className="text-stone-600 leading-relaxed mb-7">{event.description}</p>
+                        <div className="flex flex-wrap gap-3">
+                          <Link to={toEventBookingPath(event.key)} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                            <Button>Réserver cet événement <ArrowRight size={16} /></Button>
+                          </Link>
+                          <Link to="/events" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                            <Button variant="outline">Voir les salles</Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <button
+              type="button"
+              aria-label="Événement précédent"
+              onClick={goToPrevEvent}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 text-stone-700 hover:bg-white shadow-md flex items-center justify-center transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              aria-label="Événement suivant"
+              onClick={goToNextEvent}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 text-stone-700 hover:bg-white shadow-md flex items-center justify-center transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-stone-900/45 px-3 py-2 backdrop-blur">
+              {sliderEvents.map((event, index) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  aria-label={`Aller à l'événement ${index + 1}`}
+                  onClick={() => goToEvent(index)}
+                  className={`h-2.5 rounded-full transition-all ${index === currentEvent ? 'w-8 bg-white' : 'w-2.5 bg-white/60 hover:bg-white/80'}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>

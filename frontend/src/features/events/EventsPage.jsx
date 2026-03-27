@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CalendarDays, Briefcase, Cake, HeartHandshake, Phone, Send, Sparkles, Users } from 'lucide-react'
 import Button from '../../shared/ui/Button'
 import Card from '../../shared/ui/Card'
@@ -33,6 +34,7 @@ const steps = safeEventContent.steps
 
 export default function EventsPage() {
   const { createEventReservation } = useBooking()
+  const [searchParams] = useSearchParams()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState('')
@@ -81,6 +83,15 @@ export default function EventsPage() {
     setErrors({})
     setIsModalOpen(true)
   }
+
+  useEffect(() => {
+    const shouldOpenReservation = searchParams.get('reserve') === '1'
+    if (!shouldOpenReservation) return
+
+    const requestedEventType = searchParams.get('eventType') || ''
+    const knownEventType = eventTypes.find((t) => t.key === requestedEventType)
+    openModal(knownEventType?.key || requestedEventType)
+  }, [searchParams])
 
   const setField = (key, value) => {
     setForm(prev => ({ ...prev, [key]: value }))
