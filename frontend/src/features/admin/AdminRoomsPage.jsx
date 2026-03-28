@@ -70,12 +70,12 @@ export default function AdminRoomsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-stone-800">Gestion des chambres</h1>
           <p className="text-stone-500 text-sm mt-1">{rooms.length} chambres au total</p>
         </div>
-        <Button onClick={openAdd}><Plus size={16} /> Ajouter une chambre</Button>
+        <Button onClick={openAdd} className="w-full sm:w-auto"><Plus size={16} /> Ajouter une chambre</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -123,7 +123,7 @@ export default function AdminRoomsPage() {
       {/* Add/Edit Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}
         title={editRoom ? 'Modifier la chambre' : 'Ajouter une chambre'} size="lg">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Nom de la chambre" placeholder="Chambre Classique" value={form.name} onChange={set('name')} className="col-span-2" />
           <Select label="Type" value={form.type} onChange={set('type')}>
             {['classic','superior','deluxe','family','suite','single'].map(t => (
@@ -140,7 +140,7 @@ export default function AdminRoomsPage() {
             <label className="text-sm font-medium text-stone-700 block mb-2">Image de la chambre</label>
             
             {/* Method selector */}
-            <div className="flex gap-2 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
               <button
                 type="button"
                 onClick={() => setImageMethod('url')}
@@ -225,18 +225,18 @@ export default function AdminRoomsPage() {
             <label htmlFor="available" className="text-sm text-stone-700">Chambre disponible</label>
           </div>
         </div>
-        <div className="flex gap-3 mt-5 justify-end">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
-          <Button onClick={handleSave}>{editRoom ? 'Enregistrer' : 'Ajouter'}</Button>
+        <div className="flex flex-col-reverse sm:flex-row gap-3 mt-5 sm:justify-end">
+          <Button variant="secondary" onClick={() => setModalOpen(false)} className="w-full sm:w-auto">Annuler</Button>
+          <Button onClick={handleSave} className="w-full sm:w-auto">{editRoom ? 'Enregistrer' : 'Ajouter'}</Button>
         </div>
       </Modal>
 
       {/* Delete confirm */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Confirmer la suppression" size="sm">
         <p className="text-stone-600 mb-5">Êtes-vous sûr de vouloir supprimer cette chambre ? Cette action est irréversible.</p>
-        <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Annuler</Button>
-          <Button variant="danger" onClick={() => handleDelete(deleteConfirm)}>Supprimer</Button>
+        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+          <Button variant="secondary" onClick={() => setDeleteConfirm(null)} className="w-full sm:w-auto">Annuler</Button>
+          <Button variant="danger" onClick={() => handleDelete(deleteConfirm)} className="w-full sm:w-auto">Supprimer</Button>
         </div>
       </Modal>
     </div>

@@ -98,10 +98,18 @@ export default function Navbar() {
               </div>
             ) : (
               <>
-                <Link to="/login" className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors">
+                <Link
+                  to="/login"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors"
+                >
                   Connexion
                 </Link>
-                <Link to="/book" className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
+                <Link
+                  to="/book"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
+                >
                   Réserver
                 </Link>
               </>
@@ -144,8 +152,20 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setOpen(false)} className="block px-3 py-2.5 text-sm font-medium text-stone-600">Connexion</Link>
-                <Link to="/book" onClick={() => setOpen(false)} className="block px-3 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg text-center">Réserver</Link>
+                <Link
+                  to="/login"
+                  onClick={() => { setOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className="block px-3 py-2.5 text-sm font-medium text-stone-600"
+                >
+                  Connexion
+                </Link>
+                <Link
+                  to="/book"
+                  onClick={() => { setOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className="block px-3 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg text-center"
+                >
+                  Réserver
+                </Link>
               </>
             )}
           </div>

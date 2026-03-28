@@ -117,9 +117,9 @@ export default function AdminLayout() {
             >
               <Menu size={18} />
             </button>
-            <span className="text-sm font-medium text-stone-500">Panneau d'administration</span>
+            <span className="text-xs sm:text-sm font-medium text-stone-500 truncate">Panneau d'administration</span>
           </div>
-          <Link to="/" className="text-xs text-primary-600 hover:underline">← Voir le site</Link>
+          <Link to="/" className="text-[11px] sm:text-xs text-primary-600 hover:underline whitespace-nowrap">← Voir le site</Link>
         </header>
 
         {/* Page content */}

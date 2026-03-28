@@ -43,7 +43,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4 mb-8">
         <StatCard icon={BedDouble} label="Chambres totales" value={stats.totalRooms}
           sub={`${stats.availableRooms} disponibles`} color="blue" href="/admin/rooms" />
         <StatCard icon={Users} label="Clients" value={stats.totalUsers}
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
             </div>
             <div className="divide-y divide-stone-50">
               {stats.recentBookings.map(b => (
-                <div key={b.id} className="px-5 py-3.5 flex items-center gap-4">
+                <div key={b.id} className="px-4 sm:px-5 py-3.5 flex items-center gap-3 sm:gap-4">
                   <div className="w-9 h-9 bg-primary-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <span className="text-xs font-bold text-primary-700">{b.guestName[0]}</span>
                   </div>
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
               {stats.recentEventReservations.length === 0 ? (
                 <div className="px-5 py-6 text-sm text-stone-400">Aucune demande d'événement pour le moment.</div>
               ) : stats.recentEventReservations.map(e => (
-                <div key={e.id} className="px-5 py-3.5 flex items-center gap-4">
+                <div key={e.id} className="px-4 sm:px-5 py-3.5 flex items-center gap-3 sm:gap-4">
                   <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <PartyPopper size={14} className="text-amber-700" />
                   </div>

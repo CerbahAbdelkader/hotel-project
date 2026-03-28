@@ -55,16 +55,16 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-stone-800">Utilisateurs</h1>
           <p className="text-stone-500 text-sm mt-1">{regularUsers.length} client(s) enregistré(s)</p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
+        <div className="grid grid-cols-1 sm:flex gap-3 w-full sm:w-auto">
+          <Button onClick={handleRefresh} disabled={refreshing} variant="outline" className="w-full sm:w-auto">
             <RotateCw size={16} className={refreshing ? 'animate-spin' : ''} /> Rafraîchir
           </Button>
-          <Button onClick={() => { setForm(emptyUser); setModalOpen(true) }}>
+          <Button onClick={() => { setForm(emptyUser); setModalOpen(true) }} className="w-full sm:w-auto">
             <UserPlus size={16} /> Créer un client
           </Button>
         </div>
@@ -78,7 +78,7 @@ export default function AdminUsersPage() {
 
       {/* Search */}
       <Card className="p-4 mb-5">
-        <div className="relative max-w-sm">
+        <div className="relative w-full sm:max-w-sm">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
             placeholder="Rechercher par nom ou email..."
@@ -89,10 +89,10 @@ export default function AdminUsersPage() {
         </div>
       </Card>
 
-      {/* Table */}
-      <Card className="overflow-hidden">
+      {/* Desktop table */}
+      <Card className="overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
                 {['Client', 'Email', 'Téléphone', 'Réservations', 'Inscrit le', 'Actions'].map(h => (
@@ -133,6 +133,42 @@ export default function AdminUsersPage() {
           </table>
         </div>
       </Card>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <Card className="p-5 text-center text-stone-400">Aucun utilisateur trouvé.</Card>
+        ) : filtered.map(u => (
+          <Card key={u.id} className="p-4">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-primary-700">{u.name[0]}</span>
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium text-stone-800 truncate">{u.name}</div>
+                  <div className="text-xs text-stone-500 truncate">{u.email}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteConfirm(u.id)}
+                className="p-2 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="text-stone-500">Téléphone</div>
+              <div className="text-stone-700 text-right">{u.phone || '—'}</div>
+              <div className="text-stone-500">Réservations</div>
+              <div className="text-stone-700 text-right">{getUserBookings(u.id)} rés.</div>
+              <div className="text-stone-500">Inscrit le</div>
+              <div className="text-stone-700 text-right">{formatDateTime(u.createdAt)}</div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {/* Add modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Créer un client walk-in" size="sm">

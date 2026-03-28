@@ -93,13 +93,40 @@ const normalizeBooking = (booking, rooms = [], users = []) => {
   }
 }
 
+const normalizeEventReservation = (reservation, index = 0) => {
+  const startDate = reservation?.startDate
+    ? new Date(reservation.startDate).toISOString().split('T')[0]
+    : ''
+  const endDate = reservation?.endDate
+    ? new Date(reservation.endDate).toISOString().split('T')[0]
+    : ''
+
+  return {
+    id: reservation?._id || reservation?.id || `EV-${String(index + 1).padStart(3, '0')}`,
+    backendId: reservation?._id || null,
+    clientName: reservation?.clientName || '',
+    email: reservation?.email || '',
+    phone: reservation?.phone || '',
+    eventType: reservation?.eventType || '',
+    guests: Number(reservation?.guests || 0),
+    startDate,
+    endDate,
+    services: Array.isArray(reservation?.services) ? reservation.services : [],
+    message: reservation?.message || '',
+    status: reservation?.status || 'pending',
+    createdAt: reservation?.createdAt || new Date().toISOString(),
+  }
+}
+
 export function BookingProvider({ children }) {
   const { user, isAdmin, isLoggedIn } = useAuth()
   const [bookings, setBookings] = useState(BOOKINGS)
   const [rooms, setRooms] = useState(INITIAL_ROOMS)
   const [users, setUsers] = useState(INITIAL_USERS)
   const [hotels, setHotels] = useState([])
-  const [eventReservations, setEventReservations] = useState(INITIAL_EVENT_RESERVATIONS)
+  const [eventReservations, setEventReservations] = useState(
+    INITIAL_EVENT_RESERVATIONS.map((reservation, index) => normalizeEventReservation(reservation, index))
+  )
 
   useEffect(() => {
     let mounted = true
@@ -129,15 +156,17 @@ export function BookingProvider({ children }) {
         if (mounted) {
           setBookings(BOOKINGS)
           setUsers(INITIAL_USERS)
+          setEventReservations(INITIAL_EVENT_RESERVATIONS.map((reservation, index) => normalizeEventReservation(reservation, index)))
         }
         return
       }
 
       try {
         if (isAdmin) {
-          const [bookingsData, usersData] = await Promise.all([
+          const [bookingsData, usersData, eventReservationsData] = await Promise.all([
             apiRequest('/api/bookings', { withAuth: true }),
             apiRequest('/api/auth/allUsers', { withAuth: true }),
+            apiRequest('/api/event-reservations', { withAuth: true }),
           ])
 
           if (!mounted) return
@@ -153,6 +182,7 @@ export function BookingProvider({ children }) {
 
           setUsers(backendUsers)
           setBookings((bookingsData?.bookings || []).map(b => normalizeBooking(b, rooms, backendUsers)))
+          setEventReservations((eventReservationsData?.reservations || []).map((reservation, index) => normalizeEventReservation(reservation, index)))
           return
         }
 
@@ -332,6 +362,33 @@ export function BookingProvider({ children }) {
     }
     setEventReservations(prev => [...prev, newReservation])
     return { success: true, reservation: newReservation }
+  }
+
+  const changeEventReservationStatus = async (id, status) => {
+    const reservation = eventReservations.find(e => String(e.id) === String(id))
+    if (!reservation) {
+      return { success: false, message: 'Demande evenement introuvable.' }
+    }
+
+    const allowed = ['pending', 'contacted', 'confirmed', 'cancelled']
+    if (!allowed.includes(status)) {
+      return { success: false, message: 'Statut evenement invalide.' }
+    }
+
+    if (reservation.backendId && getAuthToken()) {
+      try {
+        await apiRequest(`/api/event-reservations/${reservation.backendId}/status`, {
+          method: 'PATCH',
+          withAuth: true,
+          body: { status },
+        })
+      } catch {
+        return { success: false, message: 'Impossible de mettre a jour le statut evenement.' }
+      }
+    }
+
+    setEventReservations(prev => prev.map(e => String(e.id) === String(id) ? { ...e, status } : e))
+    return { success: true }
   }
 
   const refetchUsers = async () => {
@@ -517,7 +574,7 @@ export function BookingProvider({ children }) {
   return (
     <BookingContext.Provider value={{
       bookings, eventReservations, rooms, users,
-      approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, createEventReservation, deleteBooking,
+      approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, createEventReservation, changeEventReservationStatus, deleteBooking,
       addRoom, updateRoom, deleteRoom, toggleRoomAvailability,
       addUser, deleteUser, refetchUsers,
       stats,
