@@ -6,6 +6,7 @@ import { formatDZD } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
 import { EVENTS as EVENT_TYPES } from '../../data/mockData'
+import ReservationBar from './ReservationBar'
 
 const eventIcons = { HeartHandshake, Briefcase, Cake, Users }
 
@@ -72,7 +73,7 @@ export default function HomePage() {
 
   return (
     <div>
-        <section className="relative h-[90vh] min-h-[600px] flex items-center overflow-hidden">
+        <section className="relative h-[86vh] min-h-[620px] flex items-center overflow-visible pb-20">
           <div className="absolute inset-0">
             <img
           src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&q=80"
@@ -113,28 +114,37 @@ export default function HomePage() {
           </div>
             </div>
           </div>
+      </section>
 
-          {/* Stats bar */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="bg-white/95 backdrop-blur-md rounded-t-2xl shadow-xl grid grid-cols-3 divide-x divide-stone-200">
-              {[
-                { value: '50+', label: 'Chambres' },
-                { value: '10+', label: 'Années d\'expérience' },
-                { value: '4.8', label: 'Note clients', icon: <Star size={12} className="fill-amber-400 text-amber-400" /> },
-              ].map((stat, i) => (
-                <div key={i} className="py-4 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {stat.icon}
-                    <span className="font-display text-xl font-bold text-stone-800">{stat.value}</span>
-                  </div>
-                  <div className="text-xs text-stone-500 mt-0.5">{stat.label}</div>
+      {/* Floating reservation bar under hero */}
+      <div className="relative z-20 -mt-16 sm:-mt-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <ReservationBar />
+        </div>
+      </div>
+
+      {/* Stats bar below reservation card */}
+      <div className="relative z-10 mt-6 sm:mt-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-stone-200/70 shadow-xl grid grid-cols-3 divide-x divide-stone-200">
+            {[
+              { value: '50+', label: 'Chambres' },
+              { value: '10+', label: 'Années d\'expérience' },
+              { value: '4.8', label: 'Note clients', icon: <Star size={12} className="fill-amber-400 text-amber-400" /> },
+            ].map((stat, i) => (
+              <div key={i} className="py-4 sm:py-5 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  {stat.icon}
+                  <span className="font-display text-xl font-bold text-stone-800">{stat.value}</span>
                 </div>
-              ))}
-            </div>
+                <div className="text-xs text-stone-500 mt-0.5">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
+
+      <div className="h-10 sm:h-12" />
 
       {/* Services */}
       <section className="py-20 bg-warm-50">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { Filter, Search, Users, Maximize, BedDouble } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
@@ -10,7 +11,12 @@ import Input from '../../shared/ui/Input'
 export default function RoomsPage() {
   const { rooms } = useBooking()
   const [search, setSearch] = useState('')
+  const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState({ type: 'all', available: 'all', maxPrice: '' })
+
+  const adultsParam = Number(searchParams.get('adults') || 1)
+  const childrenParam = Number(searchParams.get('children') || 0)
+  const totalGuests = adultsParam + childrenParam
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -23,6 +29,11 @@ export default function RoomsPage() {
     if (filter.available === 'available' && !room.available) return false
     if (filter.available === 'unavailable' && room.available) return false
     if (filter.maxPrice && room.price > Number(filter.maxPrice)) return false
+    return true
+  })
+
+  const finalFiltered = filtered.filter(room => {
+    if (totalGuests > 0 && room.capacity < totalGuests) return false
     return true
   })
 
@@ -92,18 +103,18 @@ export default function RoomsPage() {
 
         {/* Results count */}
         <p className="text-stone-500 text-sm mb-6">
-          {filtered.length} chambre{filtered.length !== 1 ? 's' : ''} trouvée{filtered.length !== 1 ? 's' : ''}
+           {finalFiltered.length} chambre{finalFiltered.length !== 1 ? 's' : ''} trouvée{finalFiltered.length !== 1 ? 's' : ''}
         </p>
 
         {/* Grid */}
-        {filtered.length === 0 ? (
+          {finalFiltered.length === 0 ? (
           <div className="text-center py-20 text-stone-400">
             <BedDouble size={48} className="mx-auto mb-4 opacity-30" />
             <p>Aucune chambre ne correspond à vos critères.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map(room => (
+            {finalFiltered.map(room => (
               <Card key={room.id} hover className="overflow-hidden">
                 <div className="relative h-52 overflow-hidden">
                   <img src={room.image} alt={room.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />

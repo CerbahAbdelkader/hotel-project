@@ -6,7 +6,7 @@ import Card from '../../shared/ui/Card'
 import Input from '../../shared/ui/Input'
 import Modal from '../../shared/ui/Modal'
 import { useBooking } from '../../context/BookingContext'
-import { apiEndpoint } from '../../utils/api'
+import { apiRequest } from '../../utils/api'
 import * as mockData from '../../data/mockData'
 
 const iconByName = {
@@ -162,13 +162,11 @@ export default function EventsPage() {
 
     setLoading(true)
     try {
-      // Use centralized API base URL for deployed backend requests.
-      const response = await fetch(apiEndpoint('/api/event-reservations'), {
+      // Submit through shared API helper to keep URL/auth/error behavior consistent.
+      await apiRequest('/api/event-reservations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: payload,
       })
-      if (!response.ok) throw new Error('API error')
 
       setIsModalOpen(false)
       resetForm()
