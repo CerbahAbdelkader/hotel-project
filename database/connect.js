@@ -1,20 +1,17 @@
-const mongoose = require('mongoose');
-
-const ConnectDB = async (url) => {
+const mongoose =require('mongoose')
+require('dns').setServers(['8.8.8.8', '8.8.4.4']);
+const ConnectDB = async (URI) => {
   try {
-
-    await mongoose.connect(url, {
+    // include recommended connection options
+    await mongoose.connect(URI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
     });
-
-    console.log("MongoDB connected");
-
+    console.log('connected to database');
   } catch (error) {
-
-    console.error("MongoDB connection failed");
-    process.exit(1);
-
+    console.error('❌ Database connection failed:', error.message);
+    // propagate the error so the caller (server.js) can handle it
+    throw error;
   }
 };
 

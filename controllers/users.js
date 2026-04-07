@@ -85,21 +85,22 @@ const deleteUser = async (req, res) => {
   }
 };
 
-
-const deleteAccount=async(req,res)=>{
-
+const deleteAccount = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deletedUser = await User.findByIdAndDelete(id);
+    if (String(req.user._id) !== String(id) && req.user.role !== 'admin') {
+      return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
+    }
 
+    const deletedUser = await User.findByIdAndDelete(id);
     if (!deletedUser) {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' });
     }
 
-    return res.status(StatusCodes.OK).json({ message: 'User deleted successfully' });
+    return res.status(StatusCodes.OK).json({ message: 'Account deleted successfully' });
   } catch (error) {
-    console.error('Error during deleting user:', error);
+    console.error('Error during deleting account:', error);
 
     if (error.name === 'ValidationError') {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Validation error occurred' });
@@ -107,8 +108,9 @@ const deleteAccount=async(req,res)=>{
 
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
-}
+};
 
 
 
-module.exports={deleteAccount,login,register,getAllUserProfile,deleteUser}
+
+module.exports={login,register,getAllUserProfile,deleteUser,deleteAccount}

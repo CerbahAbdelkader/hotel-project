@@ -1,9 +1,15 @@
 const { check, validationResult } = require('express-validator');
 const {StatusCodes} =require('http-status-codes')
 const validateRegister = [
-  check('username')
+  check('name')
     .notEmpty()
-    .withMessage('Username is required')
+    .withMessage('Name is required')
+    .isLength({ min: 3 })
+    .withMessage('Name must be at least 3 characters long'),
+
+  // Backward compatibility: allow clients still sending "username"
+  check('username')
+    .optional()
     .isLength({ min: 3 })
     .withMessage('Username must be at least 3 characters long'),
 
@@ -20,6 +26,10 @@ const validateRegister = [
     .withMessage('Password must be at least 6 characters long'),
 
   (req, res, next) => {
+    if (!req.body.name && req.body.username) {
+      req.body.name = req.body.username;
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(StatusCodes.BAD_REQUEST).json({ errors: errors.array() });
