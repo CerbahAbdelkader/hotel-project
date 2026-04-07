@@ -14,15 +14,20 @@ export default function BookingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const preselectedRoomId = searchParams.get('room')
+  const today = new Date().toISOString().split('T')[0]
+  const initialCheckIn = searchParams.get('checkIn') || ''
+  const initialCheckOut = searchParams.get('checkOut') || (/^\d{4}-\d{2}-\d{2}$/.test(initialCheckIn) ? new Date(new Date(`${initialCheckIn}T00:00:00`).getTime() + 86400000).toISOString().split('T')[0] : '')
+  const initialAdults = Math.max(1, Number(searchParams.get('adults') || 1) || 1)
+  const initialChildren = Math.max(0, Number(searchParams.get('children') || 0) || 0)
 
   const availableRooms = rooms.filter(r => r.available)
 
   const [form, setForm] = useState({
     roomId: preselectedRoomId || '',
-    checkIn: '',
-    checkOut: '',
-    adults: 1,
-    children: 0,
+    checkIn: initialCheckIn,
+    checkOut: initialCheckOut,
+    adults: initialAdults,
+    children: initialChildren,
     guestName: user?.name || '',
     guestEmail: user?.email || '',
     guestPhone: user?.phone || '',
@@ -124,8 +129,6 @@ export default function BookingPage() {
       setLoading(false)
     }
   }
-
-  const today = new Date().toISOString().split('T')[0]
 
   if (submitted) return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4">

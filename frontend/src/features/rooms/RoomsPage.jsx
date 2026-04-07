@@ -1,27 +1,78 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
-import { Filter, Search, Users, Maximize, BedDouble } from 'lucide-react'
+import { Filter, CalendarDays, Users, Maximize, BedDouble } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
 import { formatDZD } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
 import Input from '../../shared/ui/Input'
 
+const addDays = (dateValue, days) => {
+  if (!dateValue || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return ''
+
+  const [year, month, day] = dateValue.split('-').map(Number)
+  const nextDate = new Date(Date.UTC(year, month - 1, day + days))
+  return nextDate.toISOString().split('T')[0]
+}
+
 export default function RoomsPage() {
-  const { rooms } = useBooking()
+  const { rooms, bookings } = useBooking()
   const [search, setSearch] = useState('')
   const [searchParams] = useSearchParams()
-  const [filter, setFilter] = useState({ type: 'all', available: 'all', maxPrice: '' })
+  const [filter, setFilter] = useState({
+    type: 'all',
+    available: 'all',
+    maxPrice: '',
+    checkIn: searchParams.get('checkIn') || '',
+    checkOut: searchParams.get('checkOut') || '',
+  })
 
   const adultsParam = Number(searchParams.get('adults') || 1)
   const childrenParam = Number(searchParams.get('children') || 0)
   const totalGuests = adultsParam + childrenParam
+  const today = useMemo(() => new Date().toISOString().split('T')[0], [])
+
+  useEffect(() => {
+    setFilter({
+      type: searchParams.get('type') || 'all',
+      available: searchParams.get('available') || 'all',
+      maxPrice: searchParams.get('maxPrice') || '',
+      checkIn: searchParams.get('checkIn') || '',
+      checkOut: searchParams.get('checkOut') || '',
+    })
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!filter.checkIn) return
+
+    setFilter((current) => {
+      const minCheckOut = addDays(current.checkIn, 1)
+      if (current.checkOut && current.checkOut > current.checkIn) return current
+      if (current.checkOut === minCheckOut) return current
+      return { ...current, checkOut: minCheckOut }
+    })
+  }, [filter.checkIn])
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
+
+  const minCheckOut = filter.checkIn ? addDays(filter.checkIn, 1) : today
+  const hasValidStay = Boolean(filter.checkIn && filter.checkOut && filter.checkOut > filter.checkIn)
+
+  const roomHasBookingConflict = (room) => {
+    if (!hasValidStay) return false
+
+    return bookings.some((booking) => {
+      if (String(booking.roomId) !== String(room.id)) return false
+      if (['rejected', 'cancelled'].includes(booking.status)) return false
+      if (!booking.checkIn || !booking.checkOut) return false
+
+      return filter.checkIn < booking.checkOut && booking.checkIn < filter.checkOut
+    })
+  }
 
   const filtered = rooms.filter(room => {
     if (search && !room.name.toLowerCase().includes(search.toLowerCase())) return false
@@ -29,6 +80,7 @@ export default function RoomsPage() {
     if (filter.available === 'available' && !room.available) return false
     if (filter.available === 'unavailable' && room.available) return false
     if (filter.maxPrice && room.price > Number(filter.maxPrice)) return false
+    if (roomHasBookingConflict(room)) return false
     return true
   })
 
@@ -38,6 +90,19 @@ export default function RoomsPage() {
   })
 
   const types = ['all', ...new Set(rooms.map(r => r.type))]
+
+  const buildBookingLink = (roomId) => {
+    const params = new URLSearchParams({
+      room: String(roomId),
+      adults: String(adultsParam),
+      children: String(childrenParam),
+    })
+
+    if (filter.checkIn) params.set('checkIn', filter.checkIn)
+    if (filter.checkOut) params.set('checkOut', filter.checkOut)
+
+    return `/book?${params.toString()}`
+  }
 
   return (
     <div className="py-12">
@@ -53,6 +118,10 @@ export default function RoomsPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-2xl shadow-sm border border-warm-100 p-5 mb-8">
+          <div className="flex items-center gap-2 mb-4 text-stone-700">
+            <Filter size={16} />
+            <h2 className="font-semibold">Filtres de recherche</h2>
+          </div>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-48">
               <Input
@@ -60,6 +129,24 @@ export default function RoomsPage() {
                 placeholder="Nom de chambre..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 min-w-40">
+              <Input
+                label="Arrivée"
+                type="date"
+                min={today}
+                value={filter.checkIn}
+                onChange={e => setFilter(f => ({ ...f, checkIn: e.target.value }))}
+              />
+            </div>
+            <div className="flex-1 min-w-40">
+              <Input
+                label="Départ"
+                type="date"
+                min={minCheckOut}
+                value={filter.checkOut}
+                onChange={e => setFilter(f => ({ ...f, checkOut: e.target.value }))}
               />
             </div>
             <div className="flex-1 min-w-40">
@@ -95,10 +182,16 @@ export default function RoomsPage() {
                 onChange={e => setFilter(f => ({ ...f, maxPrice: e.target.value }))}
               />
             </div>
-            <Button variant="ghost" onClick={() => { setSearch(''); setFilter({ type: 'all', available: 'all', maxPrice: '' }) }}>
+            <Button variant="ghost" onClick={() => { setSearch(''); setFilter({ type: 'all', available: 'all', maxPrice: '', checkIn: '', checkOut: '' }) }}>
               Réinitialiser
             </Button>
           </div>
+          {hasValidStay && (
+            <p className="mt-3 text-xs text-stone-500 flex items-center gap-2">
+              <CalendarDays size={14} className="text-primary-500" />
+              Séjour du {filter.checkIn} au {filter.checkOut}
+            </p>
+          )}
         </div>
 
         {/* Results count */}
@@ -140,7 +233,7 @@ export default function RoomsPage() {
                       <Button variant="outline" className="w-full" size="sm">Détails</Button>
                     </Link>
                     {room.available && (
-                      <Link to={`/book?room=${room.id}`} className="flex-1">
+                        <Link to={buildBookingLink(room.id)} className="flex-1">
                         <Button className="w-full" size="sm">Réserver</Button>
                       </Link>
                     )}
