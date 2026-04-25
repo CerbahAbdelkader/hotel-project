@@ -95,10 +95,41 @@ const deleteRoom = async (req, res) => {
   }
 };
 
+const checkRoomAvailability = async (req, res) => {
+  try {
+    const { roomId, checkIn, checkOut } = req.query;
+
+    if (!roomId || !checkIn || !checkOut) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'roomId, checkIn, and checkOut are required' });
+    }
+
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Room not found' });
+    }
+
+    const Booking = require('../models/Booking');
+
+    const overlappingBookings = await Booking.find({
+      room: roomId,
+      status: { $in: ['confirmed', 'checked-in'] },
+      $or: [
+        { checkIn: { $lt: new Date(checkOut) }, checkOut: { $gt: new Date(checkIn) } }
+      ]
+    });
+
+    const isAvailable = overlappingBookings.length === 0;
+    return res.status(StatusCodes.OK).json({ available: isAvailable });
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getRooms,
   getRoomById,
   createRoom,
   updateRoom,
   deleteRoom,
+  checkRoomAvailability,
 };
