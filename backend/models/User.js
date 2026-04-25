@@ -22,6 +22,17 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     default: "user"
+<<<<<<< HEAD
+=======
+  },
+  lastLoginAt: {
+    type: Date,
+    default: null
+  },
+  loginCount: {
+    type: Number,
+    default: 0
+>>>>>>> origin/main
   }
 }, { timestamps: true });
 
@@ -43,7 +54,17 @@ UserSchema.methods.createToken=function(){
   )
 }
 UserSchema.methods.comparePassword=async function(password){
+<<<<<<< HEAD
 const isMatched=await bcrypt.compare(password,this.password)
 return isMatched
+=======
+  // Backward compatibility: some legacy records may still store plain text passwords.
+  if (typeof this.password === 'string' && !this.password.startsWith('$2')) {
+    return password === this.password;
+  }
+
+  const isMatched = await bcrypt.compare(password, this.password);
+  return isMatched;
+>>>>>>> origin/main
 }
 module.exports = mongoose.model('User', UserSchema);

@@ -95,6 +95,7 @@ const deleteRoom = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 const checkRoomAvailability = async (req, res) => {
   try {
     const { roomId, checkIn, checkOut } = req.query;
@@ -125,11 +126,16 @@ const checkRoomAvailability = async (req, res) => {
   }
 };
 
+=======
+>>>>>>> origin/main
 module.exports = {
   getRooms,
   getRoomById,
   createRoom,
   updateRoom,
   deleteRoom,
+<<<<<<< HEAD
   checkRoomAvailability,
+=======
+>>>>>>> origin/main
 };

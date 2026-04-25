@@ -1,10 +1,27 @@
 const Booking = require('../models/Booking');
 const Room = require('../models/Room');
+<<<<<<< HEAD
+=======
+const mongoose = require('mongoose');
+>>>>>>> origin/main
 const { StatusCodes } = require('http-status-codes');
 
 const createBooking = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { roomId, checkIn, checkOut } = req.body;
+=======
+    const { roomId, checkIn, checkOut, guestName, guestEmail, guestPhone } = req.body;
+
+    if (!roomId) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'roomId is required' });
+    }
+
+    // Guard against invalid ObjectId values to avoid cast exceptions and generic 500 errors.
+    if (!mongoose.Types.ObjectId.isValid(String(roomId))) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid roomId' });
+    }
+>>>>>>> origin/main
 
     const room = await Room.findById(roomId);
     if (!room || !room.available) {
@@ -25,22 +42,115 @@ const createBooking = async (req, res) => {
     const days = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
     const totalPrice = days * room.price;
 
+<<<<<<< HEAD
     const booking = await Booking.create({
       user: req.user._id,
+=======
+    // For authenticated users, use user ID. For guests, use guest info.
+    const bookingData = {
+>>>>>>> origin/main
       room: roomId,
       checkIn: checkInDate,
       checkOut: checkOutDate,
       totalPrice,
+<<<<<<< HEAD
     });
 
     room.available = false;
     await room.save();
+=======
+      status: 'pending',
+      paymentStatus: 'unpaid',
+    };
+
+    if (req.user) {
+      // Authenticated user booking
+      bookingData.user = req.user._id;
+    } else {
+      // Guest booking - requires name and phone, email is optional
+      if (!guestName || !guestPhone) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ 
+          message: 'For guest bookings, guestName and guestPhone are required' 
+        });
+      }
+      bookingData.guestName = guestName;
+      if (guestEmail) {
+        bookingData.guestEmail = guestEmail;
+      }
+      bookingData.guestPhone = guestPhone;
+    }
+
+    const booking = await Booking.create(bookingData);
+
+    // Update only availability to avoid failing on unrelated legacy room field validation.
+    await Room.findByIdAndUpdate(roomId, { available: false });
+>>>>>>> origin/main
 
     return res.status(StatusCodes.CREATED).json({ message: 'Booking created successfully', booking });
   } catch (error) {
     if (error.name === 'ValidationError') {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: error.message });
     }
+<<<<<<< HEAD
+=======
+    if (error.name === 'CastError') {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid booking payload' });
+    }
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
+  }
+};
+
+const updateBookingStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const allowed = ['pending', 'approved', 'rejected', 'cancelled'];
+
+    if (!allowed.includes(status)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid status value' });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    // Keep room availability in sync with status updates from admin panel.
+    if (status === 'approved') {
+      await Room.findByIdAndUpdate(booking.room, { available: false });
+    }
+    if (status === 'rejected' || status === 'cancelled') {
+      await Room.findByIdAndUpdate(booking.room, { available: true });
+    }
+
+    return res.status(StatusCodes.OK).json({ message: 'Booking status updated', booking });
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
+  }
+};
+
+const updateBookingPaymentStatus = async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+    const allowed = ['paid', 'unpaid'];
+
+    if (!allowed.includes(paymentStatus)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid paymentStatus value' });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
+    }
+
+    booking.paymentStatus = paymentStatus;
+    await booking.save();
+
+    return res.status(StatusCodes.OK).json({ message: 'Booking payment status updated', booking });
+  } catch (error) {
+>>>>>>> origin/main
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
   }
 };
@@ -57,6 +167,31 @@ const getMyBookings = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
+=======
+const getBookingsByEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email is required' });
+    }
+
+    const bookings = await Booking.find({ guestEmail: email })
+      .populate('room', 'roomNumber type price hotel')
+      .sort({ createdAt: -1 });
+
+    if (bookings.length === 0) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'No bookings found for this email' });
+    }
+
+    return res.status(StatusCodes.OK).json({ bookings });
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
+  }
+};
+
+>>>>>>> origin/main
 const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -80,8 +215,17 @@ const getBookingById = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
     }
 
+<<<<<<< HEAD
     const isOwner = String(booking.user._id) === String(req.user._id);
     if (!isOwner && req.user.role !== 'admin') {
+=======
+    // Check if authenticated user is the owner OR if guest provided their email
+    const isAuthenticatedOwner = req.user && String(booking.user?._id) === String(req.user._id);
+    const isAdmin = req.user?.role === 'admin';
+    const isGuestByEmail = req.body?.email && booking.guestEmail === req.body.email;
+
+    if (!isAuthenticatedOwner && !isAdmin && !isGuestByEmail && req.user) {
+>>>>>>> origin/main
       return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 
@@ -98,8 +242,20 @@ const cancelBooking = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
     }
 
+<<<<<<< HEAD
     const isOwner = String(booking.user) === String(req.user._id);
     if (!isOwner && req.user.role !== 'admin') {
+=======
+    // Check authorization: owner (user or guest), admin, or guest providing email/phone verification
+    const isAuthenticatedOwner = req.user && String(booking.user) === String(req.user._id);
+    const isAdmin = req.user?.role === 'admin';
+    const isGuestByEmail = req.body?.email && booking.guestEmail === req.body.email;
+    const isGuestByNameAndPhone = req.body?.guestName && req.body?.guestPhone && 
+      booking.guestName === req.body.guestName && 
+      booking.guestPhone === req.body.guestPhone;
+
+    if (!isAuthenticatedOwner && !isAdmin && !isGuestByEmail && !isGuestByNameAndPhone) {
+>>>>>>> origin/main
       return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 
@@ -117,7 +273,16 @@ const cancelBooking = async (req, res) => {
 module.exports = {
   createBooking,
   getMyBookings,
+<<<<<<< HEAD
   getAllBookings,
   getBookingById,
   cancelBooking,
+=======
+  getBookingsByEmail,
+  getAllBookings,
+  getBookingById,
+  cancelBooking,
+  updateBookingStatus,
+  updateBookingPaymentStatus,
+>>>>>>> origin/main
 };

@@ -1,7 +1,8 @@
 {
-  "name": "hotel-booking-backend",
+  "name": "hotel-project-workspace",
+  "private": true,
   "version": "1.0.0",
-  "main": "server.js",
+  "description": "Workspace scripts for frontend/backend hotel-project",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
