@@ -1,5 +1,4 @@
-import { lazy, Suspense } from 'react'
-import { createHashRouter } from 'react-router-dom'
+import { createBrowserRouter, createHashRouter } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
 import ProtectedRoute from '../shared/components/ProtectedRoute'
@@ -29,7 +28,7 @@ const Loading = () => (
   </div>
 )
 
-export const router = createHashRouter([
+const routeConfig = [
   {
     element: <MainLayout />,
     children: [
@@ -74,4 +73,8 @@ export const router = createHashRouter([
       </div>
     )
   }
-])
+]
+
+export const router = import.meta.env.DEV
+  ? createBrowserRouter(routeConfig, { basename: '/hotel-project' })
+  : createHashRouter(routeConfig, { basename: '/hotel-project' })

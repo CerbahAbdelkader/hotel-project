@@ -22,7 +22,7 @@ export default function RoomsPage() {
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState({
     type: 'all',
-    available: 'all',
+    available: 'available',
     maxPrice: '',
     checkIn: searchParams.get('checkIn') || '',
     checkOut: searchParams.get('checkOut') || '',
@@ -36,7 +36,7 @@ export default function RoomsPage() {
   useEffect(() => {
     setFilter({
       type: searchParams.get('type') || 'all',
-      available: searchParams.get('available') || 'all',
+      available: searchParams.get('available') || 'available',
       maxPrice: searchParams.get('maxPrice') || '',
       checkIn: searchParams.get('checkIn') || '',
       checkOut: searchParams.get('checkOut') || '',
@@ -182,7 +182,7 @@ export default function RoomsPage() {
                 onChange={e => setFilter(f => ({ ...f, maxPrice: e.target.value }))}
               />
             </div>
-            <Button variant="ghost" onClick={() => { setSearch(''); setFilter({ type: 'all', available: 'all', maxPrice: '', checkIn: '', checkOut: '' }) }}>
+            <Button variant="ghost" onClick={() => { setSearch(''); setFilter({ type: 'all', available: 'available', maxPrice: '', checkIn: '', checkOut: '' }) }}>
               Réinitialiser
             </Button>
           </div>

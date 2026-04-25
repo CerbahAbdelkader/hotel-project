@@ -45,6 +45,7 @@ export default function ReservationBar() {
       checkOut,
       adults,
       children,
+      available: 'available',
     })
 
     navigate(`/rooms?${params.toString()}`)
