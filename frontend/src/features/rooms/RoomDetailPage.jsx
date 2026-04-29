@@ -5,6 +5,7 @@ import { useBooking } from '../../context/BookingContext'
 import { formatDZD } from '../../utils/formatters'
 import Button from '../../shared/ui/Button'
 import Card from '../../shared/ui/Card'
+import ReviewsSection from './ReviewsSection'
 
 export default function RoomDetailPage() {
   const { id } = useParams()
@@ -113,6 +114,9 @@ export default function RoomDetailPage() {
             </Card>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <ReviewsSection roomId={room.id} roomName={room.name} />
       </div>
     </div>
   )

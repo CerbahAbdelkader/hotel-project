@@ -10,6 +10,9 @@ const hotelRoutes = require('./routes/hotels');
 const bookingRoutes = require('./routes/bookings');
 const roomRoutes = require('./routes/rooms');
 const eventReservationRoutes = require('./routes/eventReservations');
+const contactRoutes = require('./routes/contact');
+const reviewRoutes = require('./routes/reviews');
+const adminRoutes = require('./routes/admin');
 
 const seedAdmin = require('./config/seedAdmin'); // استيراد إنشاء admin
 
@@ -34,6 +37,9 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/event-reservations', eventReservationRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Simple test route
 app.get('/api/test', (req, res) => {

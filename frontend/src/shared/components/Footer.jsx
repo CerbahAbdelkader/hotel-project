@@ -69,7 +69,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2 text-stone-400">
                 <Mail size={15} className="flex-shrink-0 text-primary-400" />
-                <a href="mailto:contact@hotel-saida.dz" className="hover:text-primary-400">contact@hotel-saida.dz</a>
+                <a href="mailto:hotel.saida.dz@gmail.com" className="hover:text-primary-400">hotel.saida.dz@gmail.com</a>
               </li>
             </ul>
           </div>

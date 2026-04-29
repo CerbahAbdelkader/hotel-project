@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
-import { BedDouble, Users, CalendarCheck, Clock, DollarSign, TrendingUp, CheckCircle, ArrowRight, PartyPopper } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { BedDouble, Users, CalendarCheck, Clock, DollarSign, TrendingUp, CheckCircle, ArrowRight, PartyPopper, Mail } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
+import { apiRequest } from '../../utils/api'
 import { formatDZD, formatDateTime } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
 import StatusBadge from '../../shared/ui/Badge'
@@ -34,6 +36,21 @@ function StatCard({ icon: Icon, label, value, sub, color = 'primary', href }) {
 
 export default function AdminDashboard() {
   const { stats, bookings } = useBooking()
+  const [contacts, setContacts] = useState([])
+
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const data = await apiRequest('/api/contact', { withAuth: true })
+        setContacts(data.contacts || [])
+      } catch (error) {
+        console.error('Failed to fetch contacts:', error)
+      }
+    }
+    fetchContacts()
+  }, [])
+
+  const newMessagesCount = contacts.filter(c => c.status === 'new').length
 
   return (
     <div>
@@ -54,6 +71,8 @@ export default function AdminDashboard() {
           color="green" href="/admin/bookings" />
         <StatCard icon={CheckCircle} label="Payées" value={stats.paidBookings}
           color="primary" href="/admin/bookings" />
+        <StatCard icon={Mail} label="Messages" value={contacts.length}
+          sub={`${newMessagesCount} nouveau(x)`} color="blue" href="/admin/contacts" />
         <StatCard icon={TrendingUp} label="Revenus" value={formatDZD(stats.totalRevenue)}
           sub="Total encaissé" color="green" />
         <StatCard icon={PartyPopper} label="Événements" value={stats.totalEventReservations}

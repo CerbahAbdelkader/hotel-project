@@ -10,6 +10,8 @@ import RoomDetailPage from '../features/rooms/RoomDetailPage'
 import ServicesPage from '../features/services/ServicesPage'
 import EventsPage from '../features/events/EventsPage'
 import BookingPage from '../features/bookings/BookingPage'
+import MyBookingsPage from '../features/bookings/MyBookingsPage'
+import CheckBookingPage from '../features/bookings/CheckBookingPage'
 import AboutPage from '../features/home/AboutPage'
 import ContactPage from '../features/home/ContactPage'
 import LoginPage from '../features/auth/LoginPage'
@@ -21,6 +23,7 @@ import AdminDashboard from '../features/admin/AdminDashboard'
 import AdminRoomsPage from '../features/admin/AdminRoomsPage'
 import AdminBookingsPage from '../features/admin/AdminBookingsPage'
 import AdminUsersPage from '../features/admin/AdminUsersPage'
+import AdminContactsPage from '../features/admin/AdminContactsPage'
 
 const Loading = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -40,6 +43,8 @@ const routeConfig = [
       { path: '/about', element: <AboutPage /> },
       { path: '/contact', element: <ContactPage /> },
       { path: '/book', element: <BookingPage /> },
+      { path: '/my-bookings', element: <MyBookingsPage /> },
+      { path: '/check-booking', element: <CheckBookingPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
     ]
@@ -59,6 +64,7 @@ const routeConfig = [
       { path: '/admin/rooms', element: <AdminRoomsPage /> },
       { path: '/admin/bookings', element: <AdminBookingsPage /> },
       { path: '/admin/users', element: <AdminUsersPage /> },
+      { path: '/admin/contacts', element: <AdminContactsPage /> },
     ]
   },
   {

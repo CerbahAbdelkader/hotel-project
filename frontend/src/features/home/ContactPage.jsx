@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MapPin, Phone, Mail, Clock, CheckCircle } from 'lucide-react'
+import { apiRequest } from '../../utils/api'
+import Toast from '../../shared/ui/Toast'
 import Button from '../../shared/ui/Button'
 import Input, { Textarea } from '../../shared/ui/Input'
 import Card from '../../shared/ui/Card'
@@ -8,15 +10,48 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [errors, setErrors] = useState({})
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {}
+    if (!form.name.trim()) newErrors.name = 'Nom requis.'
+    if (!form.email.trim()) newErrors.email = 'Email requis.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Email invalide.'
+    if (!form.subject.trim()) newErrors.subject = 'Sujet requis.'
+    if (!form.message.trim()) newErrors.message = 'Message requis.'
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!validateForm()) return
+
     setLoading(true)
-    setTimeout(() => { setSent(true); setLoading(false) }, 800)
+    try {
+      await apiRequest('/api/contact', {
+        method: 'POST',
+        body: {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          subject: form.subject.trim(),
+          message: form.message.trim(),
+        },
+      })
+      setSent(true)
+      setToast({ type: 'success', message: 'Message envoyé avec succès !' })
+      setForm({ name: '', email: '', subject: '', message: '' })
+      setTimeout(() => setSent(false), 3000)
+    } catch (error) {
+      setToast({ type: 'error', message: error.message || 'Erreur lors de l\'envoi du message.' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -86,10 +121,10 @@ export default function ContactPage() {
               <Card className="p-6">
                 <h2 className="font-display text-xl font-semibold text-stone-800 mb-5">Envoyer un message</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <Input label="Nom complet" placeholder="Mohammed Benali" value={form.name} onChange={set('name')} required />
-                  <Input label="Email" type="email" placeholder="votre@email.com" value={form.email} onChange={set('email')} required />
-                  <Input label="Sujet" placeholder="Renseignement, réservation..." value={form.subject} onChange={set('subject')} required />
-                  <Textarea label="Message" rows={5} placeholder="Votre message..." value={form.message} onChange={set('message')} required />
+                  <Input label="Nom complet" placeholder="Mohammed Benali" value={form.name} onChange={set('name')} error={errors.name} />
+                  <Input label="Email" type="email" placeholder="votre@email.com" value={form.email} onChange={set('email')} error={errors.email} />
+                  <Input label="Sujet" placeholder="Renseignement, réservation..." value={form.subject} onChange={set('subject')} error={errors.subject} />
+                  <Textarea label="Message" rows={5} placeholder="Votre message..." value={form.message} onChange={set('message')} error={errors.message} />
                   <Button type="submit" className="w-full" loading={loading}>Envoyer le message</Button>
                 </form>
               </Card>
@@ -97,6 +132,15 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={4000}
+        />
+      )}
     </div>
   )
 }
