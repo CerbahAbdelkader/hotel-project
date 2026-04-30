@@ -4,30 +4,10 @@ import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
 import Input from '../../shared/ui/Input'
 import Toast from '../../shared/ui/Toast'
+import StatusBadge from '../../shared/ui/Badge'
+import DeadlineCountdown from '../../shared/ui/DeadlineCountdown'
 import { formatDZD } from '../../utils/formatters'
 import { apiRequest } from '../../utils/api'
-
-const statusBadge = (status) => {
-  const styles = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
-    confirmed: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700',
-    cancelled: 'bg-gray-100 text-gray-700',
-  }
-  const labels = {
-    pending: 'En attente',
-    approved: 'Approuvé',
-    confirmed: 'Confirmé',
-    rejected: 'Rejeté',
-    cancelled: 'Annulé',
-  }
-  return (
-    <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${styles[status] || styles.pending}`}>
-      {labels[status] || status}
-    </span>
-  )
-}
 
 export default function CheckBookingPage() {
   const [searchType, setSearchType] = useState('phone') // 'phone' or 'email'
@@ -95,7 +75,7 @@ export default function CheckBookingPage() {
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cancelPayload),
+          body: JSON.stringify({ ...cancelPayload, cancelReason: 'Customer request' }),
         }
       )
 
@@ -242,8 +222,14 @@ export default function CheckBookingPage() {
                           <div className="space-y-2">
                             <div>
                               <p className="text-xs text-stone-500 mb-1">Statut</p>
-                              {statusBadge(booking.status)}
+                              <StatusBadge status={booking.status} />
                             </div>
+                            {(booking.status === 'pending_confirmation' || booking.status === 'confirmed') && booking.confirmationDeadline && (
+                              <DeadlineCountdown deadline={booking.confirmationDeadline} prefix="Expire dans" />
+                            )}
+                            {booking.status === 'awaiting_payment' && booking.paymentDeadline && (
+                              <DeadlineCountdown deadline={booking.paymentDeadline} prefix="Paiement attendu dans" tone="orange" />
+                            )}
                             <div>
                               <p className="text-xs text-stone-500">Montant</p>
                               <p className="font-semibold text-lg text-stone-800">{formatDZD(booking.totalPrice)}</p>
@@ -252,8 +238,15 @@ export default function CheckBookingPage() {
                         </div>
                       </div>
 
+                      {booking.cancelReason && (
+                        <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 mb-4">
+                          <p className="text-xs font-semibold text-stone-500 mb-1">Motif d'annulation</p>
+                          <p className="text-sm text-stone-700">{booking.cancelReason}</p>
+                        </div>
+                      )}
+
                       {/* Cancel Button */}
-                      {booking.status !== 'cancelled' && booking.status !== 'rejected' && (
+                      {!['cancelled', 'expired', 'completed'].includes(booking.status) && (
                         <div className="border-t pt-4">
                           <Button
                             variant="danger"

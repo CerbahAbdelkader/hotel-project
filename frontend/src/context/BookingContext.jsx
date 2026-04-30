@@ -3,6 +3,7 @@ import { BOOKINGS, ROOMS as INITIAL_ROOMS, USERS as INITIAL_USERS, EVENT_RESERVA
 import { calcNights } from '../utils/formatters'
 import { apiRequest, getAuthToken } from '../utils/api'
 import { useAuth } from './AuthContext'
+import { normalizeBookingStatus, normalizeRoomStatus } from '../utils/statusMeta'
 
 const BookingContext = createContext(null)
 
@@ -29,6 +30,8 @@ const defaultAmenitiesByType = {
   family: ['Wi-Fi gratuit', 'Climatisation', 'TV satellite', 'Espace familial', 'Salle de bain privee'],
 }
 
+const addHoursIso = (dateValue, hours) => new Date(new Date(dateValue).getTime() + (hours * 60 * 60 * 1000)).toISOString()
+
 const normalizeRoom = (room, index) => {
   const roomId = room?._id || room?.id
   const normalizedType = toFrontendRoomType(room?.type)
@@ -37,6 +40,7 @@ const normalizeRoom = (room, index) => {
   const amenities = Array.isArray(room?.amenities) && room.amenities.length
     ? room.amenities
     : (defaultAmenitiesByType[normalizedType] || defaultAmenitiesByType.classic)
+  const status = normalizeRoomStatus(room)
 
   return {
     id: roomId,
@@ -50,7 +54,9 @@ const normalizeRoom = (room, index) => {
     capacity: Number(room?.capacity || room?.maxGuests || 2),
     size: Number(room?.size || 25),
     floor: Number(room?.floor || 1),
-    available: room?.available !== false,
+    status,
+    available: status === 'available',
+    maintenanceNote: room?.maintenanceNote || '',
     featured: room?.featured ?? index < 3,
     description: room?.description || `${name} confortable pour votre sejour.`,
     amenities,
@@ -70,8 +76,11 @@ const normalizeBooking = (booking, rooms = [], users = []) => {
   const checkOut = booking?.checkOut ? new Date(booking.checkOut).toISOString().split('T')[0] : ''
   const nights = checkIn && checkOut ? Math.max(1, calcNights(checkIn, checkOut)) : Number(booking?.nights || 1)
 
-  let status = booking?.status || 'pending'
-  if (status === 'confirmed') status = 'approved'
+  const status = normalizeBookingStatus(booking?.status)
+  const createdAt = booking?.createdAt || new Date().toISOString()
+  const confirmationDeadline = booking?.confirmationDeadline || ((status === 'pending_confirmation' || status === 'confirmed') ? addHoursIso(createdAt, 12) : null)
+  const paymentDeadline = booking?.paymentDeadline || (status === 'awaiting_payment' ? addHoursIso(createdAt, 48) : null)
+  const paymentStatus = booking?.paymentStatus || (['paid', 'checked_in', 'completed'].includes(status) ? 'paid' : 'unpaid')
 
   return {
     id: booking?._id || booking?.id,
@@ -87,9 +96,12 @@ const normalizeBooking = (booking, rooms = [], users = []) => {
     nights,
     totalPrice: Number(booking?.totalPrice || (room?.price || 0) * nights),
     status,
-    paymentStatus: booking?.paymentStatus || 'unpaid',
+    paymentStatus,
+    confirmationDeadline,
+    paymentDeadline,
+    cancelReason: booking?.cancelReason || '',
     notes: booking?.notes || '',
-    createdAt: booking?.createdAt || new Date().toISOString(),
+    createdAt,
   }
 }
 
@@ -205,12 +217,12 @@ export function BookingProvider({ children }) {
 
   // Booking actions
   const approveBooking = (id) =>
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'approved' } : b))
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'awaiting_payment' } : b))
 
   const rejectBooking = (id) =>
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'rejected' } : b))
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b))
 
-  const changeBookingStatus = async (id, status) => {
+  const changeBookingStatus = async (id, status, options = {}) => {
     const booking = bookings.find(b => b.id === id)
     if (!booking) {
       return { success: false, message: 'Reservation introuvable.' }
@@ -222,14 +234,46 @@ export function BookingProvider({ children }) {
         await apiRequest(`/api/bookings/${booking.backendId}/status`, {
           method: 'PATCH',
           withAuth: true,
-          body: { status },
+          body: { status, cancelReason: options.cancelReason },
         })
       } catch {
         return { success: false, message: 'Impossible de mettre a jour le statut.' }
       }
     }
 
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
+    const normalizedStatus = normalizeBookingStatus(status)
+    setBookings(prev => prev.map(b => {
+      if (b.id !== id) return b
+      const next = { ...b, status: normalizedStatus }
+      if (normalizedStatus === 'awaiting_payment') {
+        next.paymentStatus = 'unpaid'
+        next.paymentDeadline = addHoursIso(new Date(), 48)
+      }
+      if (normalizedStatus === 'paid') {
+        next.paymentStatus = 'paid'
+        next.paymentDeadline = null
+      }
+      if (normalizedStatus === 'checked_in') {
+        next.paymentStatus = 'paid'
+      }
+      if (normalizedStatus === 'cancelled' || normalizedStatus === 'expired') {
+        next.paymentStatus = 'unpaid'
+        next.cancelReason = options.cancelReason || next.cancelReason || 'Reservation cancelled'
+        next.paymentDeadline = null
+      }
+      return next
+    }))
+    setRooms(prev => prev.map(room => String(room.id) === String(booking.roomId)
+      ? {
+          ...room,
+          status: normalizedStatus === 'checked_in'
+            ? 'occupied'
+            : (normalizedStatus === 'completed' || normalizedStatus === 'cancelled' || normalizedStatus === 'expired')
+              ? 'available'
+              : 'reserved',
+          available: ['completed', 'cancelled', 'expired'].includes(normalizedStatus),
+        }
+      : room))
     return { success: true }
   }
 
@@ -252,7 +296,7 @@ export function BookingProvider({ children }) {
       }
     }
 
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, paymentStatus: 'paid' } : b))
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'paid', paymentStatus: 'paid', paymentDeadline: null } : b))
     return { success: true }
   }
 
@@ -274,7 +318,7 @@ export function BookingProvider({ children }) {
       }
     }
 
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, paymentStatus: 'unpaid' } : b))
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, paymentStatus: 'unpaid', status: b.status === 'paid' ? 'awaiting_payment' : b.status } : b))
     return { success: true }
   }
 
@@ -341,11 +385,11 @@ export function BookingProvider({ children }) {
         guestPhone: data.guestPhone,
         notes: data.notes,
         paymentStatus: 'unpaid',
-        status: 'pending',
+        status: 'pending_confirmation',
       }, rooms, users)
 
       setBookings(prev => [created, ...prev])
-      setRooms(prev => prev.map(r => String(r.id) === String(data.roomId) ? { ...r, available: false } : r))
+      setRooms(prev => prev.map(r => String(r.id) === String(data.roomId) ? { ...r, status: 'reserved', available: false } : r))
       return { success: true, booking: created, message: 'Reservation created successfully.' }
     } catch (error) {
       return { success: false, message: error.message || 'Reservation impossible.' }
@@ -421,13 +465,36 @@ export function BookingProvider({ children }) {
         await apiRequest(`/api/bookings/${booking.backendId}/cancel`, {
           method: 'PATCH',
           withAuth: true,
+          body: { cancelReason: 'Customer request' },
         })
       } catch {
-        return
+        return { success: false, message: 'Impossible d\'annuler la reservation.' }
+      }
+    }
+
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled', cancelReason: 'Customer request', paymentStatus: 'unpaid' } : b))
+    setRooms(prev => prev.map(room => String(room.id) === String(booking?.roomId) ? { ...room, status: 'available', available: true } : room))
+    return { success: true }
+  }
+
+  const adminDeleteBooking = async (id) => {
+    const booking = bookings.find(b => b.id === id)
+    if (!booking) return { success: false, message: 'Reservation introuvable.' }
+
+    if (booking.backendId && getAuthToken()) {
+      try {
+        await apiRequest(`/api/bookings/${booking.backendId}`, {
+          method: 'DELETE',
+          withAuth: true,
+        })
+      } catch {
+        return { success: false, message: 'Impossible de supprimer la reservation.' }
       }
     }
 
     setBookings(prev => prev.filter(b => b.id !== id))
+    setRooms(prev => prev.map(room => String(room.id) === String(booking.roomId) ? { ...room, status: 'available', available: true } : room))
+    return { success: true }
   }
 
   // Room actions
@@ -442,7 +509,9 @@ export function BookingProvider({ children }) {
             roomNumber: room.roomNumber || String(Date.now()).slice(-4),
             type: toBackendRoomType(room.type),
             price: Number(room.price),
-            available: room.available,
+            status: room.status || (room.available ? 'available' : 'reserved'),
+            available: room.status ? room.status === 'available' : room.available,
+            maintenanceNote: room.maintenanceNote || '',
             maxGuests: Number(room.capacity || 2),
           },
         })
@@ -454,7 +523,7 @@ export function BookingProvider({ children }) {
       }
     }
 
-    const newRoom = { ...room, id: String(Date.now()), available: true }
+    const newRoom = { ...room, id: String(Date.now()), status: room.status || 'available', available: room.status ? room.status === 'available' : true, maintenanceNote: room.maintenanceNote || '' }
     setRooms(prev => [...prev, newRoom])
   }
 
@@ -471,7 +540,9 @@ export function BookingProvider({ children }) {
             name: updates.name || existingRoom.name,
             type: toBackendRoomType(updates.type || existingRoom.type),
             price: Number(updates.price ?? existingRoom.price),
-            available: updates.available ?? existingRoom.available,
+            status: updates.status || existingRoom.status,
+            available: typeof updates.available === 'boolean' ? updates.available : (updates.status || existingRoom.status) === 'available',
+            maintenanceNote: updates.maintenanceNote ?? existingRoom.maintenanceNote ?? '',
             maxGuests: Number(updates.capacity ?? existingRoom.capacity),
             size: Number(updates.size ?? existingRoom.size),
             floor: Number(updates.floor ?? existingRoom.floor),
@@ -487,7 +558,7 @@ export function BookingProvider({ children }) {
       }
     }
 
-    setRooms(prev => prev.map(r => String(r.id) === String(id) ? { ...r, ...updates } : r))
+    setRooms(prev => prev.map(r => String(r.id) === String(id) ? { ...r, ...updates, status: updates.status || r.status, available: (updates.status || r.status) === 'available' ? true : (updates.status === 'maintenance' ? false : updates.available ?? r.available), maintenanceNote: updates.maintenanceNote ?? r.maintenanceNote } : r))
   }
 
   const deleteRoom = async (id) => {
@@ -510,7 +581,8 @@ export function BookingProvider({ children }) {
   const toggleRoomAvailability = async (id) => {
     const room = rooms.find(r => String(r.id) === String(id))
     if (!room) return
-    await updateRoom(id, { available: !room.available })
+    if (room.status === 'maintenance') return
+    await updateRoom(id, { status: room.available ? 'reserved' : 'available' })
   }
 
   // User actions
@@ -560,9 +632,12 @@ export function BookingProvider({ children }) {
   const stats = {
     totalRooms: rooms.length,
     availableRooms: rooms.filter(r => r.available).length,
+    maintenanceRooms: rooms.filter(r => r.status === 'maintenance').length,
     totalUsers: users.filter(u => u.role === 'user').length,
-    pendingBookings: bookings.filter(b => b.status === 'pending').length,
-    approvedBookings: bookings.filter(b => b.status === 'approved').length,
+    pendingBookings: bookings.filter(b => b.status === 'pending_confirmation').length,
+    awaitingPayments: bookings.filter(b => b.status === 'awaiting_payment').length,
+    expiredBookings: bookings.filter(b => b.status === 'expired').length,
+    approvedBookings: bookings.filter(b => b.status === 'awaiting_payment').length,
     paidBookings: bookings.filter(b => b.paymentStatus === 'paid').length,
     totalEventReservations: eventReservations.length,
     pendingEventReservations: eventReservations.filter(e => e.status === 'pending').length,
@@ -574,7 +649,7 @@ export function BookingProvider({ children }) {
   return (
     <BookingContext.Provider value={{
       bookings, eventReservations, rooms, users,
-      approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, createEventReservation, changeEventReservationStatus, deleteBooking,
+        approveBooking, rejectBooking, changeBookingStatus, markAsPaid, markAsUnpaid, createBooking, createEventReservation, changeEventReservationStatus, deleteBooking, adminDeleteBooking,
       addRoom, updateRoom, deleteRoom, toggleRoomAvailability,
       addUser, deleteUser, refetchUsers,
       stats,

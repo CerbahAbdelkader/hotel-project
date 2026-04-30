@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { BedDouble, Users, CalendarCheck, Clock, DollarSign, TrendingUp, CheckCircle, ArrowRight, PartyPopper, Mail } from 'lucide-react'
+import { BedDouble, Users, CalendarCheck, Clock, DollarSign, TrendingUp, ArrowRight, PartyPopper, Mail, TimerReset, WalletCards, Wrench } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
 import { apiRequest } from '../../utils/api'
 import { formatDZD, formatDateTime } from '../../utils/formatters'
@@ -60,17 +60,21 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-4 mb-8">
         <StatCard icon={BedDouble} label="Chambres totales" value={stats.totalRooms}
           sub={`${stats.availableRooms} disponibles`} color="blue" href="/admin/rooms" />
         <StatCard icon={Users} label="Clients" value={stats.totalUsers}
           color="stone" href="/admin/users" />
-        <StatCard icon={Clock} label="En attente" value={stats.pendingBookings}
+        <StatCard icon={Clock} label="Confirmations" value={stats.pendingBookings}
           color="amber" href="/admin/bookings" />
-        <StatCard icon={CalendarCheck} label="Approuvées" value={stats.approvedBookings}
+        <StatCard icon={CalendarCheck} label="Paiements" value={stats.awaitingPayments}
           color="green" href="/admin/bookings" />
-        <StatCard icon={CheckCircle} label="Payées" value={stats.paidBookings}
+        <StatCard icon={WalletCards} label="Payées" value={stats.paidBookings}
           color="primary" href="/admin/bookings" />
+        <StatCard icon={TimerReset} label="Expirées" value={stats.expiredBookings}
+          color="red" href="/admin/bookings" />
+        <StatCard icon={Wrench} label="Maintenance" value={stats.maintenanceRooms}
+          color="stone" href="/admin/rooms" />
         <StatCard icon={Mail} label="Messages" value={contacts.length}
           sub={`${newMessagesCount} nouveau(x)`} color="blue" href="/admin/contacts" />
         <StatCard icon={TrendingUp} label="Revenus" value={formatDZD(stats.totalRevenue)}
@@ -100,7 +104,8 @@ export default function AdminDashboard() {
                     <div className="text-xs text-stone-400 truncate">{b.roomName} · {b.checkIn} → {b.checkOut}</div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <StatusBadge status={b.status} />
+                    <StatusBadge status={b.status} kind="booking" />
+                    <StatusBadge status={b.paymentStatus} kind="payment" />
                     <span className="text-xs font-semibold text-stone-600">{formatDZD(b.totalPrice)}</span>
                   </div>
                 </div>
@@ -141,8 +146,8 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               {[
                 { label: 'Revenu total encaissé', value: stats.totalRevenue, color: 'bg-green-500' },
-                { label: 'Revenu en attente', value: bookings.filter(b => b.status === 'approved' && b.paymentStatus === 'unpaid').reduce((s, b) => s + b.totalPrice, 0), color: 'bg-amber-400' },
-                { label: 'Réservations en cours', value: bookings.filter(b => b.status === 'pending').reduce((s, b) => s + b.totalPrice, 0), color: 'bg-blue-400' },
+                { label: 'Revenu en attente', value: bookings.filter(b => b.status === 'awaiting_payment' && b.paymentStatus === 'unpaid').reduce((s, b) => s + b.totalPrice, 0), color: 'bg-amber-400' },
+                { label: 'Réservations en attente', value: bookings.filter(b => b.status === 'pending_confirmation').reduce((s, b) => s + b.totalPrice, 0), color: 'bg-blue-400' },
               ].map(({ label, value, color }) => (
                 <div key={label}>
                   <div className="flex justify-between text-sm mb-1">

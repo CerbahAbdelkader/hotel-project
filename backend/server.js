@@ -13,10 +13,14 @@ const eventReservationRoutes = require('./routes/eventReservations');
 const contactRoutes = require('./routes/contact');
 const reviewRoutes = require('./routes/reviews');
 const adminRoutes = require('./routes/admin');
+const { expireOverdueBookings } = require('./utils/bookingWorkflow');
+const Booking = require('./models/Booking');
+const Room = require('./models/Room');
 
 const seedAdmin = require('./config/seedAdmin'); // استيراد إنشاء admin
 
 const app = express();
+let bookingWorkflowInterval = null;
 
 // Middleware
 app.use(helmet());
@@ -81,6 +85,17 @@ const findAvailablePort = async (startPort) => {
 const Start = async () => {
   try {
     await ConnectDB(process.env.MONGO_URI);
+
+    const runBookingWorkflow = async () => {
+      try {
+        await expireOverdueBookings({ Booking, Room });
+      } catch (error) {
+        console.error('Booking workflow job failed:', error.message);
+      }
+    };
+
+    await runBookingWorkflow();
+    bookingWorkflowInterval = setInterval(runBookingWorkflow, 5 * 60 * 1000);
     const port = await findAvailablePort(DEFAULT_PORT);
 
     if (port !== DEFAULT_PORT) {
@@ -95,5 +110,15 @@ const Start = async () => {
     process.exit(1); // exit with failure
   }
 };
+
+process.on('SIGINT', () => {
+  if (bookingWorkflowInterval) clearInterval(bookingWorkflowInterval);
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  if (bookingWorkflowInterval) clearInterval(bookingWorkflowInterval);
+  process.exit(0);
+});
 
 Start();

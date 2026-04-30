@@ -1,9 +1,12 @@
-import { STATUS_COLORS, STATUS_LABELS } from '../../utils/formatters'
+import { getStatusClasses, getStatusMeta } from '../../utils/statusMeta'
 
-export default function StatusBadge({ status }) {
+export default function StatusBadge({ status, kind = 'booking', className = '' }) {
+  const meta = getStatusMeta(status, kind)
+
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}>
-      {STATUS_LABELS[status] || status}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusClasses(status, kind)} ${className}`}>
+      <meta.icon size={12} />
+      {meta.label}
     </span>
   )
 }

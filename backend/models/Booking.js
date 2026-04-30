@@ -10,9 +10,12 @@ const bookingSchema = new mongoose.Schema({
   guestName: { type: String, required: false },
   guestEmail: { type: String, required: false },
   guestPhone: { type: String, required: false },
-  // Extended status model to match admin dashboard actions.
-  status: { type: String, enum: ['pending', 'approved', 'rejected', 'cancelled', 'confirmed'], default: 'pending' },
+  // Reservation workflow state used by the confirmation/payment automation.
+  status: { type: String, enum: ['pending_confirmation', 'confirmed', 'awaiting_payment', 'paid', 'checked_in', 'completed', 'cancelled', 'expired', 'pending', 'approved', 'rejected'], default: 'pending_confirmation' },
   paymentStatus: { type: String, enum: ['paid', 'unpaid'], default: 'unpaid' },
+  confirmationDeadline: { type: Date },
+  paymentDeadline: { type: Date },
+  cancelReason: { type: String, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', bookingSchema);

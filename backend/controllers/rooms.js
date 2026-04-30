@@ -1,6 +1,25 @@
 const Room = require('../models/Room');
 const Hotel = require('../models/Hotel');
 const { StatusCodes } = require('http-status-codes');
+const { normalizeRoomStatus } = require('../utils/bookingWorkflow');
+
+const normalizeRoomPayload = (payload, existingRoom = null) => {
+  const next = { ...payload };
+  const resolvedStatus = normalizeRoomStatus({
+    status: payload.status || existingRoom?.status,
+    available: typeof payload.available === 'boolean' ? payload.available : existingRoom?.available,
+    maintenanceNote: typeof payload.maintenanceNote === 'string' ? payload.maintenanceNote : existingRoom?.maintenanceNote,
+  });
+
+  next.status = resolvedStatus;
+  next.available = resolvedStatus === 'available';
+
+  if (resolvedStatus !== 'maintenance' && !next.maintenanceNote && existingRoom?.maintenanceNote) {
+    next.maintenanceNote = existingRoom.maintenanceNote;
+  }
+
+  return next;
+};
 
 const getRooms = async (req, res) => {
   try {
@@ -37,7 +56,7 @@ const createRoom = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'Hotel not found' });
     }
 
-    const room = await Room.create(req.body);
+    const room = await Room.create(normalizeRoomPayload(req.body));
     hotel.rooms.push(room._id);
     await hotel.save();
 
@@ -67,7 +86,7 @@ const updateRoom = async (req, res) => {
       await Hotel.findByIdAndUpdate(newHotel._id, { $addToSet: { rooms: existingRoom._id } });
     }
 
-    const room = await Room.findByIdAndUpdate(req.params.id, req.body, {
+    const room = await Room.findByIdAndUpdate(req.params.id, normalizeRoomPayload(req.body, existingRoom), {
       new: true,
       runValidators: true,
     }).populate('hotel', 'name city');

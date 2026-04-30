@@ -7,6 +7,7 @@ import { formatDZD } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
 import Input from '../../shared/ui/Input'
+import StatusBadge from '../../shared/ui/Badge'
 
 const addDays = (dateValue, days) => {
   if (!dateValue || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return ''
@@ -67,7 +68,7 @@ export default function RoomsPage() {
 
     return bookings.some((booking) => {
       if (String(booking.roomId) !== String(room.id)) return false
-      if (['rejected', 'cancelled'].includes(booking.status)) return false
+      if (['cancelled', 'expired', 'completed'].includes(booking.status)) return false
       if (!booking.checkIn || !booking.checkOut) return false
 
       return filter.checkIn < booking.checkOut && booking.checkIn < filter.checkOut
@@ -77,8 +78,8 @@ export default function RoomsPage() {
   const filtered = rooms.filter(room => {
     if (search && !room.name.toLowerCase().includes(search.toLowerCase())) return false
     if (filter.type !== 'all' && room.type !== filter.type) return false
-    if (filter.available === 'available' && !room.available) return false
-    if (filter.available === 'unavailable' && room.available) return false
+    if (filter.available === 'available' && room.status !== 'available') return false
+    if (filter.available === 'unavailable' && room.status === 'available') return false
     if (filter.maxPrice && room.price > Number(filter.maxPrice)) return false
     if (roomHasBookingConflict(room)) return false
     return true
@@ -212,13 +213,16 @@ export default function RoomsPage() {
                 <div className="relative h-52 overflow-hidden">
                   <img src={room.image} alt={room.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   <div className="absolute top-3 left-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${room.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {room.available ? 'Disponible' : 'Non disponible'}
-                    </span>
+                    <StatusBadge status={room.status} kind="room" />
                   </div>
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
                     <span className="text-xs font-bold text-primary-700">{formatDZD(room.price)}<span className="font-normal text-stone-500">/nuit</span></span>
                   </div>
+                  {room.status === 'maintenance' && (
+                    <div className="absolute inset-0 bg-stone-950/35 flex items-center justify-center">
+                      <span className="bg-stone-800 text-white px-3 py-1 rounded-full text-xs font-semibold">Maintenance</span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-5">
                   <h3 className="font-display font-semibold text-stone-800 mb-2">{room.name}</h3>
@@ -232,10 +236,13 @@ export default function RoomsPage() {
                     <Link to={`/rooms/${room.id}`} className="flex-1">
                       <Button variant="outline" className="w-full" size="sm">Détails</Button>
                     </Link>
-                    {room.available && (
+                    {room.status === 'available' && (
                         <Link to={buildBookingLink(room.id)} className="flex-1">
                         <Button className="w-full" size="sm">Réserver</Button>
                       </Link>
+                    )}
+                    {room.status !== 'available' && room.status === 'maintenance' && (
+                      <Button className="w-full flex-1" size="sm" disabled>Maintenance</Button>
                     )}
                   </div>
                 </div>

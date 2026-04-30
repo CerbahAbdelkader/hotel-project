@@ -1,10 +1,11 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { ArrowLeft, Users, Maximize, Wifi, Check, BedDouble } from 'lucide-react'
+import { ArrowLeft, Users, Maximize, Check, BedDouble, Wrench } from 'lucide-react'
 import { useBooking } from '../../context/BookingContext'
 import { formatDZD } from '../../utils/formatters'
 import Button from '../../shared/ui/Button'
 import Card from '../../shared/ui/Card'
+import StatusBadge from '../../shared/ui/Badge'
 import ReviewsSection from './ReviewsSection'
 
 export default function RoomDetailPage() {
@@ -42,14 +43,24 @@ export default function RoomDetailPage() {
             <div className="relative rounded-2xl overflow-hidden h-80 mb-6">
               <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
               <div className="absolute top-4 left-4">
-                <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${room.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {room.available ? '✓ Disponible' : '✗ Non disponible'}
-                </span>
+                <StatusBadge status={room.status} kind="room" />
               </div>
+              {room.status === 'maintenance' && (
+                <div className="absolute inset-0 bg-stone-950/30" />
+              )}
             </div>
 
             <h1 className="font-display text-3xl font-bold text-stone-800 mb-3">{room.name}</h1>
             <p className="text-stone-600 leading-relaxed mb-6">{room.description}</p>
+            {room.status === 'maintenance' && room.maintenanceNote && (
+              <div className="mb-6 bg-stone-50 border border-stone-200 rounded-2xl p-4 flex items-start gap-3">
+                <Wrench size={18} className="text-stone-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-stone-500 mb-1">Entretien en cours</p>
+                  <p className="text-sm text-stone-700">{room.maintenanceNote}</p>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-4 mb-6">
               <Card className="p-4 text-center">
@@ -98,12 +109,12 @@ export default function RoomDetailPage() {
                 </p>
               </div>
 
-              {room.available ? (
+              {room.status === 'available' ? (
                 <Link to={`/book?room=${room.id}`}>
                   <Button className="w-full" size="lg">Réserver cette chambre</Button>
                 </Link>
               ) : (
-                <Button className="w-full" disabled size="lg">Chambre non disponible</Button>
+                <Button className="w-full" disabled size="lg">{room.status === 'maintenance' ? 'Chambre en maintenance' : 'Chambre non disponible'}</Button>
               )}
 
               <div className="mt-4 text-center">

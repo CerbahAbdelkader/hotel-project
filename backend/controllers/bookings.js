@@ -2,6 +2,27 @@ const Booking = require('../models/Booking');
 const Room = require('../models/Room');
 const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
+const {
+  CONFIRMATION_DEADLINE_HOURS,
+  PAYMENT_DEADLINE_HOURS,
+  addHours,
+  normalizeBookingStatus,
+  canTransitionBookingStatus,
+  getRoomStatusFromBookingStatus,
+  getBookingStateUpdate,
+} = require('../utils/bookingWorkflow');
+
+const ROOM_BOOKING_LOCK_STATUSES = ['reserved', 'occupied', 'maintenance'];
+
+const syncRoomWithBookingStatus = async (booking, status) => {
+  const roomStatus = getRoomStatusFromBookingStatus(status);
+  if (!roomStatus) return;
+
+  await Room.findByIdAndUpdate(booking.room, {
+    status: roomStatus,
+    available: roomStatus === 'available',
+  });
+};
 
 const createBooking = async (req, res) => {
   try {
@@ -17,7 +38,8 @@ const createBooking = async (req, res) => {
     }
 
     const room = await Room.findById(roomId);
-    if (!room || !room.available) {
+    const roomStatus = room?.status || (room?.maintenanceNote ? 'maintenance' : room?.available === false ? 'reserved' : 'available');
+    if (!room || ROOM_BOOKING_LOCK_STATUSES.includes(roomStatus) || roomStatus === 'maintenance' || room.available === false) {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Room is not available' });
     }
 
@@ -41,8 +63,9 @@ const createBooking = async (req, res) => {
       checkIn: checkInDate,
       checkOut: checkOutDate,
       totalPrice,
-      status: 'pending',
+      status: 'pending_confirmation',
       paymentStatus: 'unpaid',
+      confirmationDeadline: addHours(new Date(), CONFIRMATION_DEADLINE_HOURS),
     };
 
     if (req.user) {
@@ -64,8 +87,7 @@ const createBooking = async (req, res) => {
 
     const booking = await Booking.create(bookingData);
 
-    // Update only availability to avoid failing on unrelated legacy room field validation.
-    await Room.findByIdAndUpdate(roomId, { available: false });
+    await Room.findByIdAndUpdate(roomId, { status: 'reserved', available: false });
 
     return res.status(StatusCodes.CREATED).json({ message: 'Booking created successfully', booking });
   } catch (error) {
@@ -81,10 +103,10 @@ const createBooking = async (req, res) => {
 
 const updateBookingStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const allowed = ['pending', 'approved', 'rejected', 'cancelled'];
+    const { status, cancelReason } = req.body;
+    const nextStatus = normalizeBookingStatus(status);
 
-    if (!allowed.includes(status)) {
+    if (!nextStatus) {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid status value' });
     }
 
@@ -93,15 +115,34 @@ const updateBookingStatus = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
     }
 
-    booking.status = status;
+    const currentStatus = normalizeBookingStatus(booking.status);
+    if (!canTransitionBookingStatus(currentStatus, nextStatus)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid status transition' });
+    }
+
+    if ((nextStatus === 'cancelled' || nextStatus === 'expired') && !cancelReason) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Cancellation reason is required' });
+    }
+
+    const bookingUpdate = getBookingStateUpdate({
+      nextStatus,
+      cancelReason,
+      createdAt: booking.createdAt,
+    });
+
+    booking.status = bookingUpdate.status;
+    if (bookingUpdate.paymentStatus) booking.paymentStatus = bookingUpdate.paymentStatus;
+    if (bookingUpdate.confirmationDeadline !== undefined) booking.confirmationDeadline = bookingUpdate.confirmationDeadline;
+    if (bookingUpdate.paymentDeadline !== undefined) booking.paymentDeadline = bookingUpdate.paymentDeadline;
+    if (bookingUpdate.cancelReason !== undefined) booking.cancelReason = bookingUpdate.cancelReason;
     await booking.save();
 
-    // Keep room availability in sync with status updates from admin panel.
-    if (status === 'approved') {
-      await Room.findByIdAndUpdate(booking.room, { available: false });
-    }
-    if (status === 'rejected' || status === 'cancelled') {
-      await Room.findByIdAndUpdate(booking.room, { available: true });
+    if (booking.status === 'checked_in') {
+      await Room.findByIdAndUpdate(booking.room, { status: 'occupied', available: false });
+    } else if (booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'expired') {
+      await Room.findByIdAndUpdate(booking.room, { status: 'available', available: true });
+    } else if (booking.status === 'paid' || booking.status === 'awaiting_payment' || booking.status === 'confirmed' || booking.status === 'pending_confirmation') {
+      await syncRoomWithBookingStatus(booking, booking.status);
     }
 
     return res.status(StatusCodes.OK).json({ message: 'Booking status updated', booking });
@@ -124,7 +165,19 @@ const updateBookingPaymentStatus = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
     }
 
+    const currentStatus = normalizeBookingStatus(booking.status);
+
     booking.paymentStatus = paymentStatus;
+    if (paymentStatus === 'paid') {
+      booking.status = 'paid';
+      booking.paymentDeadline = null;
+      if (currentStatus === 'pending_confirmation' || currentStatus === 'confirmed' || currentStatus === 'awaiting_payment') {
+        await Room.findByIdAndUpdate(booking.room, { status: 'reserved', available: false });
+      }
+    } else if (currentStatus === 'paid') {
+      booking.status = 'awaiting_payment';
+      booking.paymentDeadline = addHours(new Date(), PAYMENT_DEADLINE_HOURS);
+    }
     await booking.save();
 
     return res.status(StatusCodes.OK).json({ message: 'Booking payment status updated', booking });
@@ -225,11 +278,31 @@ const cancelBooking = async (req, res) => {
     }
 
     booking.status = 'cancelled';
+    booking.cancelReason = req.body?.cancelReason || 'Customer request';
+    booking.paymentStatus = 'unpaid';
+    booking.paymentDeadline = null;
     await booking.save();
 
-    await Room.findByIdAndUpdate(booking.room, { available: true });
+    await Room.findByIdAndUpdate(booking.room, { status: 'available', available: true });
 
     return res.status(StatusCodes.OK).json({ message: 'Booking cancelled', booking });
+  } catch (error) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
+  }
+};
+
+const deleteBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Booking not found' });
+    }
+
+    await Room.findByIdAndUpdate(booking.room, { status: 'available', available: true });
+    await Booking.findByIdAndDelete(req.params.id);
+
+    return res.status(StatusCodes.OK).json({ message: 'Booking deleted successfully' });
   } catch (error) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
   }
@@ -244,4 +317,5 @@ module.exports = {
   cancelBooking,
   updateBookingStatus,
   updateBookingPaymentStatus,
+  deleteBooking,
 };

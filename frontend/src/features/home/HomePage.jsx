@@ -5,6 +5,7 @@ import { useBooking } from '../../context/BookingContext'
 import { formatDZD } from '../../utils/formatters'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
+import StatusBadge from '../../shared/ui/Badge'
 import { EVENTS as EVENT_TYPES } from '../../data/mockData'
 import ReservationBar from './ReservationBar'
 
@@ -197,9 +198,12 @@ export default function HomePage() {
                   <div className="absolute top-3 right-3 bg-white rounded-full px-3 py-1 text-xs font-semibold text-primary-700 shadow">
                     {formatDZD(room.price)}/nuit
                   </div>
-                  {!room.available && (
+                  <div className="absolute top-3 left-3">
+                    <StatusBadge status={room.status} kind="room" />
+                  </div>
+                  {room.status === 'maintenance' && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold">Non disponible</span>
+                      <span className="bg-stone-800 text-white px-3 py-1 rounded-full text-xs font-semibold">Maintenance</span>
                     </div>
                   )}
                 </div>

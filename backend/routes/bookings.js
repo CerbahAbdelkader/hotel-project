@@ -8,6 +8,7 @@ const {
   cancelBooking,
   updateBookingStatus,
   updateBookingPaymentStatus,
+  deleteBooking,
 } = require('../controllers/bookings');
 const { auth, optionalAuth, itsAdmin } = require('../middleware/auth');
 const validateMongoId = require('../middleware/validId');
@@ -22,6 +23,7 @@ router.route('/guest/by-email').post(getBookingsByEmail);
 router.route('/my-bookings').get(auth, getMyBookings);
 router.route('/:id').get(validateMongoId, auth, getBookingById);
 router.route('/:id/cancel').patch(validateMongoId, optionalAuth, cancelBooking);
+router.route('/:id').delete(validateMongoId, auth, itsAdmin, deleteBooking);
 
 // Admin controls
 router.route('/:id/status').patch(validateMongoId, auth, itsAdmin, updateBookingStatus);

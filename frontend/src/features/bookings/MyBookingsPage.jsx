@@ -2,33 +2,13 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useBooking } from '../../context/BookingContext'
 import { formatDZD, calcNights } from '../../utils/formatters'
-import { Calendar, MapPin, DollarSign, AlertCircle, CheckCircle, Clock, Trash2 } from 'lucide-react'
+import { Calendar, AlertCircle, Clock, Trash2, FileText } from 'lucide-react'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
 import Toast from '../../shared/ui/Toast'
+import StatusBadge from '../../shared/ui/Badge'
+import DeadlineCountdown from '../../shared/ui/DeadlineCountdown'
 import { Link } from 'react-router-dom'
-
-const statusBadge = (status) => {
-  const styles = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
-    confirmed: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700',
-    cancelled: 'bg-gray-100 text-gray-700',
-  }
-  const labels = {
-    pending: 'En attente',
-    approved: 'Approuvé',
-    confirmed: 'Confirmé',
-    rejected: 'Rejeté',
-    cancelled: 'Annulé',
-  }
-  return (
-    <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${styles[status] || styles.pending}`}>
-      {labels[status] || status}
-    </span>
-  )
-}
 
 export default function MyBookingsPage() {
   const { user, isLoggedIn } = useAuth()
@@ -65,8 +45,12 @@ export default function MyBookingsPage() {
   const handleCancel = async (bookingId) => {
     setCancellingId(bookingId)
     try {
-      await deleteBooking(bookingId)
-      setToast({ type: 'success', message: 'Réservation annulée avec succès.' })
+      const result = await deleteBooking(bookingId)
+      if (result?.success) {
+        setToast({ type: 'success', message: 'Réservation annulée avec succès.' })
+      } else {
+        setToast({ type: 'error', message: result?.message || 'Erreur lors de l\'annulation.' })
+      }
     } catch (error) {
       setToast({ type: 'error', message: error.message || 'Erreur lors de l\'annulation.' })
     } finally {
@@ -116,8 +100,18 @@ export default function MyBookingsPage() {
                   <div>
                     <div className="mb-3">
                       <p className="text-xs text-stone-500 mb-1">Statut</p>
-                      {statusBadge(booking.status)}
+                      <StatusBadge status={booking.status} />
                     </div>
+                    {(booking.status === 'pending_confirmation' || booking.status === 'confirmed') && booking.confirmationDeadline && (
+                      <div className="mb-3">
+                        <DeadlineCountdown deadline={booking.confirmationDeadline} prefix="La réservation expire dans" />
+                      </div>
+                    )}
+                    {booking.status === 'awaiting_payment' && booking.paymentDeadline && (
+                      <div className="mb-3">
+                        <DeadlineCountdown deadline={booking.paymentDeadline} prefix="Paiement attendu dans" tone="orange" />
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs text-stone-500 mb-1">Montant total</p>
                       <p className="font-semibold text-lg text-stone-800">{formatDZD(booking.totalPrice)}</p>
@@ -135,8 +129,18 @@ export default function MyBookingsPage() {
                   </div>
                 </div>
 
+                {booking.cancelReason && (
+                  <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 mb-4 flex items-start gap-2">
+                    <FileText size={16} className="text-stone-500 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-stone-500 mb-1">Motif d'annulation</p>
+                      <p className="text-sm text-stone-700">{booking.cancelReason}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Cancel Button */}
-                {booking.status !== 'cancelled' && booking.status !== 'rejected' && (
+                {!['cancelled', 'expired', 'completed'].includes(booking.status) && (
                   <div className="border-t pt-4">
                     <Button
                       variant="danger"

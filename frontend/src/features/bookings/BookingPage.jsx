@@ -20,7 +20,7 @@ export default function BookingPage() {
   const initialAdults = Math.max(1, Number(searchParams.get('adults') || 1) || 1)
   const initialChildren = Math.max(0, Number(searchParams.get('children') || 0) || 0)
 
-  const availableRooms = rooms.filter(r => r.available)
+  const availableRooms = rooms.filter(r => r.status === 'available')
 
   const [form, setForm] = useState({
     roomId: preselectedRoomId || '',
@@ -249,6 +249,11 @@ export default function BookingPage() {
                   <p className="text-xs text-stone-500">
                     Capacité maximale de cette chambre: <span className="font-semibold">{selectedRoom.capacity} personne(s)</span>.
                   </p>
+                )}
+                {selectedRoom?.status === 'maintenance' && (
+                  <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 text-sm text-stone-700">
+                    Cette chambre est temporairement indisponible pour cause de maintenance.
+                  </div>
                 )}
               </div>
             </Card>
