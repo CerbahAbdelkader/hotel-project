@@ -12,10 +12,12 @@ import Input, { Textarea } from '../../shared/ui/Input'
 export default function AdminBookingsPage() {
   const { bookings, eventReservations, changeBookingStatus, markAsPaid, markAsUnpaid, changeEventReservationStatus, deleteBooking, adminDeleteBooking } = useBooking()
   const [selected, setSelected] = useState(null)
+  const [selectedAction, setSelectedAction] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
   const [pendingAction, setPendingAction] = useState(null)
+  const [submittingAction, setSubmittingAction] = useState(false)
   const [actionReason, setActionReason] = useState('')
-  const [filter, setFilter] = useState({ status: 'all', payment: 'all', search: '' })
+  const [filter, setFilter] = useState({ status: 'all', search: '' })
   const [actionNotice, setActionNotice] = useState(null)
 
   const showActionNotice = (type, message) => {
@@ -27,6 +29,27 @@ export default function AdminBookingsPage() {
     setOpenMenuId(null)
     setPendingAction({ booking, ...action })
     setActionReason(action.defaultReason || '')
+  }
+
+  const handleActionSelect = (bookingId, label, tone) => {
+    setSelectedAction({ bookingId, label, tone })
+  }
+
+  const getActionToneClass = (tone) => {
+    switch (tone) {
+      case 'success':
+        return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      case 'danger':
+        return 'border-red-200 bg-red-50 text-red-700'
+      case 'info':
+        return 'border-blue-200 bg-blue-50 text-blue-700'
+      case 'accent':
+        return 'border-indigo-200 bg-indigo-50 text-indigo-700'
+      case 'warn':
+        return 'border-rose-200 bg-rose-50 text-rose-700'
+      default:
+        return 'border-stone-200 bg-stone-50 text-stone-700'
+    }
   }
 
   const handleStatusChange = async (bookingId, status, reason) => {
@@ -88,42 +111,54 @@ export default function AdminBookingsPage() {
     if (result?.success) {
       showActionNotice('success', 'Réservation supprimée.')
       setSelected(null)
+      setSelectedAction(prev => (prev?.bookingId === bookingId ? null : prev))
     } else {
       showActionNotice('error', result?.message || 'Impossible de supprimer la réservation.')
     }
   }
 
   const submitPendingAction = async () => {
-    if (!pendingAction) return
+    if (!pendingAction || submittingAction) return
 
     const { booking, type, status, paymentStatus } = pendingAction
-
-    if (type === 'payment') {
-      await handlePaymentChange(booking.id, paymentStatus)
-      setPendingAction(null)
-      return
-    }
-
-    if (type === 'delete') {
-      await handleDeleteBooking(booking.id)
-      setPendingAction(null)
-      return
-    }
 
     if ((status === 'cancelled') && !actionReason.trim()) {
       showActionNotice('error', 'Un motif est requis pour cette action.')
       return
     }
 
-    if (status === 'awaiting_payment') {
-      await handleConfirmReservation(booking.id)
-    } else if (status === 'checked_in') {
-      await handleCheckedIn(booking.id)
-    } else if (status === 'cancelled') {
-      await handleRejectReservation(booking.id, actionReason.trim())
-    }
-
+    // Close confirmation modal immediately and show quick processing notice
     setPendingAction(null)
+    showActionNotice('info', 'Action en cours...')
+    setSubmittingAction(true)
+
+    try {
+      if (type === 'payment') {
+        await handlePaymentChange(booking.id, paymentStatus)
+      } else if (type === 'delete') {
+        await handleDeleteBooking(booking.id)
+      } else {
+        if (status === 'awaiting_payment') {
+          await handleConfirmReservation(booking.id)
+        } else if (status === 'checked_in') {
+          await handleCheckedIn(booking.id)
+        } else if (status === 'cancelled') {
+          await handleRejectReservation(booking.id, actionReason.trim())
+        }
+      }
+    } finally {
+      setSubmittingAction(false)
+    }
+  }
+
+  const performImmediateDelete = async (booking) => {
+    setOpenMenuId(null)
+    handleActionSelect(booking.id, 'Supprimée', 'warn')
+    showActionNotice('info', 'Suppression en cours...')
+    const result = await handleDeleteBooking(booking.id)
+    if (!result?.success) {
+      setSelectedAction(null)
+    }
   }
 
   const handleEventStatusChange = async (reservationId, status) => {
@@ -137,7 +172,6 @@ export default function AdminBookingsPage() {
 
   const filtered = bookings.filter(b => {
     if (filter.status !== 'all' && b.status !== filter.status) return false
-    if (filter.payment !== 'all' && b.paymentStatus !== filter.payment) return false
     const searchValue = filter.search.toLowerCase()
     const guestName = (b.guestName || '').toLowerCase()
     const bookingId = String(b.id || '').toLowerCase()
@@ -176,21 +210,14 @@ export default function AdminBookingsPage() {
           </div>
           <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
             className="w-full sm:w-auto px-3 py-2 rounded-lg border border-stone-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-400">
-            <option value="all">Tous les statuts</option>
+            <option value="all">Tous</option>
             <option value="pending_confirmation">En attente de confirmation</option>
             <option value="awaiting_payment">En attente de paiement</option>
-            <option value="paid">Payées</option>
+            <option value="paid">Payée</option>
             <option value="checked_in">En séjour</option>
-            <option value="completed">Terminées</option>
-            <option value="cancelled">Annulées</option>
-            <option value="expired">Expirées</option>
+            <option value="cancelled">Annulée</option>
           </select>
-          <select value={filter.payment} onChange={e => setFilter(f => ({ ...f, payment: e.target.value }))}
-            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-stone-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-400">
-            <option value="all">Paiement: tous</option>
-            <option value="paid">Payées</option>
-            <option value="unpaid">Non payées</option>
-          </select>
+          {/* payment filter removed per request */}
           <span className="text-xs text-stone-400 self-start sm:self-auto">{filtered.length} résultat(s)</span>
         </div>
       </Card>
@@ -201,14 +228,14 @@ export default function AdminBookingsPage() {
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
-                {['ID', 'Client', 'Chambre', 'Dates', 'Total', 'Statut', 'Paiement', 'Actions'].map(h => (
+                {['ID', 'Client', 'Chambre', 'Dates', 'Total', 'Paiement', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-stone-400">Aucune réservation trouvée.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-stone-400">Aucune réservation trouvée.</td></tr>
               ) : filtered.map(b => (
                 <tr key={b.id} className="hover:bg-warm-50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-stone-500">{b.id}</td>
@@ -222,42 +249,60 @@ export default function AdminBookingsPage() {
                     <span className="text-stone-400">{b.nights} nuit(s)</span>
                   </td>
                   <td className="px-4 py-3 font-semibold text-stone-800 whitespace-nowrap">{formatDZD(b.totalPrice)}</td>
-                  <td className="px-4 py-3"><StatusBadge status={b.status} kind="booking" /></td>
-                  <td className="px-4 py-3"><StatusBadge status={b.paymentStatus} kind="payment" /></td>
                   <td className="px-4 py-3">
-                    <div className="relative flex items-center justify-end">
+                    <div className="flex flex-wrap gap-2">
+                      {selectedAction?.bookingId === b.id ? (
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm ${getActionToneClass(selectedAction.tone)}`}>
+                          {selectedAction.label}
+                        </span>
+                      ) : b.status === 'pending_confirmation' ? (
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm ${getActionToneClass('warn')}`}>
+                          À confirmer
+                        </span>
+                      ) : (
+                        <StatusBadge status={b.paymentStatus} kind="payment" />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="relative flex items-center justify-center gap-2">
                       <button
-                        onClick={() => setOpenMenuId(openMenuId === b.id ? null : b.id)}
-                        className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 text-amber-700 font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
-                        title="Cliquez pour voir les actions disponibles"
+                        onClick={() => setSelected(b)}
+                        className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-stone-50 border border-stone-200 hover:bg-stone-100 text-stone-600 text-xs transition-all duration-200 shadow-sm hover:shadow-md"
+                        title="Voir les détails de la réservation"
                       >
+                        <Eye size={13} />
+                      </button>
+                      <div className="relative flex items-center justify-end">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === b.id ? null : b.id)}
+                          className="group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 text-amber-700 font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
+                          title="Cliquez pour voir les actions disponibles"
+                        >
                         <span>Actions</span>
                         <ChevronDown size={14} className={`transition-transform ${openMenuId === b.id ? 'rotate-180' : ''}`} />
                       </button>
                       {openMenuId === b.id && (
                         <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border border-stone-200 bg-white shadow-2xl p-1 animate-in fade-in slide-in-from-top-2">
-                          <button onClick={() => setSelected(b)} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-stone-50 text-stone-700 transition-colors">
-                            <Eye size={14} className="text-stone-400" /> Voir détails
-                          </button>
-                          <div className="h-px bg-stone-100 my-1" />
-                          <button onClick={() => openAction(b, { type: 'status', status: 'awaiting_payment', title: 'Confirmer la réservation', confirmLabel: 'Confirmer' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-emerald-50 text-emerald-700 transition-colors">
+                          <button onClick={() => { handleActionSelect(b.id, 'Confirmée', 'success'); openAction(b, { type: 'status', status: 'awaiting_payment', title: 'Confirmer la réservation', confirmLabel: 'Confirmer' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-emerald-50 text-emerald-700 transition-colors">
                             <CheckCircle2 size={14} /> Confirmer la réservation
                           </button>
-                          <button onClick={() => openAction(b, { type: 'status', status: 'cancelled', title: 'Annuler la réservation', confirmLabel: 'Annuler', requiresReason: true, defaultReason: 'No availability' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-red-50 text-red-700 transition-colors">
+                          <button onClick={() => { handleActionSelect(b.id, 'Annulée', 'danger'); openAction(b, { type: 'status', status: 'cancelled', title: 'Annuler la réservation', confirmLabel: 'Annuler', requiresReason: true, defaultReason: 'No availability' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-red-50 text-red-700 transition-colors">
                             <XCircle size={14} /> Refuser / annuler
                           </button>
-                          <button onClick={() => openAction(b, { type: 'payment', paymentStatus: 'paid', title: 'Marquer comme payée', confirmLabel: 'Marquer payée' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-blue-50 text-blue-700 transition-colors">
+                          <button onClick={() => { handleActionSelect(b.id, 'Payée', 'info'); openAction(b, { type: 'payment', paymentStatus: 'paid', title: 'Marquer comme payée', confirmLabel: 'Marquer payée' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-blue-50 text-blue-700 transition-colors">
                             <DollarSign size={14} /> Marquer comme payée
                           </button>
-                          <button onClick={() => openAction(b, { type: 'status', status: 'checked_in', title: 'Marquer comme entrée', confirmLabel: 'Marquer entrée' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-indigo-50 text-indigo-700 transition-colors">
+                          <button onClick={() => { handleActionSelect(b.id, 'Entrée', 'accent'); openAction(b, { type: 'status', status: 'checked_in', title: 'Marquer comme entrée', confirmLabel: 'Marquer entrée' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-indigo-50 text-indigo-700 transition-colors">
                             <LogIn size={14} /> Marquer comme entrée
                           </button>
                           <div className="h-px bg-stone-100 my-1" />
-                          <button onClick={() => openAction(b, { type: 'delete', title: 'Supprimer la réservation', confirmLabel: 'Supprimer', requiresReason: false })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-rose-50 text-rose-700 transition-colors">
+                          <button onClick={() => performImmediateDelete(b)} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-rose-50 text-rose-700 transition-colors">
                             <Trash2 size={14} /> Supprimer la réservation
                           </button>
                         </div>
                       )}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -290,26 +335,22 @@ export default function AdminBookingsPage() {
                 </button>
                 {openMenuId === b.id && (
                   <div className="absolute right-0 top-11 z-20 w-56 rounded-xl border border-stone-200 bg-white shadow-2xl p-1 animate-in fade-in slide-in-from-top-2">
-                    <button onClick={() => setSelected(b)} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-stone-50 text-stone-700 transition-colors">
-                      <Eye size={14} className="text-stone-400" /> Voir détails
-                    </button>
-                    <div className="h-px bg-stone-100 my-1" />
-                    <button onClick={() => openAction(b, { type: 'status', status: 'awaiting_payment', title: 'Confirmer la réservation', confirmLabel: 'Confirmer' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-emerald-50 text-emerald-700 transition-colors">
+                    <button onClick={() => { handleActionSelect(b.id, 'Confirmée', 'success'); openAction(b, { type: 'status', status: 'awaiting_payment', title: 'Confirmer la réservation', confirmLabel: 'Confirmer' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-emerald-50 text-emerald-700 transition-colors">
                       <CheckCircle2 size={14} /> Confirmer la réservation
                     </button>
-                    <button onClick={() => openAction(b, { type: 'status', status: 'cancelled', title: 'Annuler la réservation', confirmLabel: 'Annuler', requiresReason: true, defaultReason: 'No availability' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-red-50 text-red-700 transition-colors">
-                      <XCircle size={14} /> Annuler la réservation
+                    <button onClick={() => { handleActionSelect(b.id, 'Annulée', 'danger'); openAction(b, { type: 'status', status: 'cancelled', title: 'Annuler la réservation', confirmLabel: 'Annuler', requiresReason: true, defaultReason: 'No availability' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-red-50 text-red-700 transition-colors">
+                      <XCircle size={14} /> Refuser / annuler
                     </button>
-                    <button onClick={() => openAction(b, { type: 'payment', paymentStatus: 'paid', title: 'Marquer comme payée', confirmLabel: 'Marquer payée' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-blue-50 text-blue-700 transition-colors">
+                    <button onClick={() => { handleActionSelect(b.id, 'Payée', 'info'); openAction(b, { type: 'payment', paymentStatus: 'paid', title: 'Marquer comme payée', confirmLabel: 'Marquer payée' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-blue-50 text-blue-700 transition-colors">
                       <DollarSign size={14} /> Marquer comme payée
                     </button>
-                    <button onClick={() => openAction(b, { type: 'status', status: 'checked_in', title: 'Marquer comme entrée', confirmLabel: 'Marquer entrée' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-indigo-50 text-indigo-700 transition-colors">
+                    <button onClick={() => { handleActionSelect(b.id, 'Entrée', 'accent'); openAction(b, { type: 'status', status: 'checked_in', title: 'Marquer comme entrée', confirmLabel: 'Marquer entrée' }) }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-indigo-50 text-indigo-700 transition-colors">
                       <LogIn size={14} /> Marquer comme entrée
                     </button>
                     <div className="h-px bg-stone-100 my-1" />
-                    <button onClick={() => openAction(b, { type: 'delete', title: 'Supprimer la réservation', confirmLabel: 'Supprimer' })} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-rose-50 text-rose-700 transition-colors">
-                      <Trash2 size={14} /> Supprimer la réservation
-                    </button>
+                          <button onClick={() => performImmediateDelete(b)} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-rose-50 text-rose-700 transition-colors">
+                            <Trash2 size={14} /> Supprimer la réservation
+                          </button>
                   </div>
                 )}
               </div>
@@ -324,73 +365,89 @@ export default function AdminBookingsPage() {
               <div className="text-stone-500">Total</div>
               <div className="text-stone-800 font-semibold text-right">{formatDZD(b.totalPrice)}</div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <StatusBadge status={b.status} kind="booking" />
-              <StatusBadge status={b.paymentStatus} kind="payment" />
+            <div className="flex flex-wrap gap-2 mb-3">
+              {selectedAction?.bookingId === b.id ? (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm ${getActionToneClass(selectedAction.tone)}`}>
+                  {selectedAction.label}
+                </span>
+              ) : b.status === 'pending_confirmation' ? (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm ${getActionToneClass('warn')}`}>
+                  À confirmer
+                </span>
+              ) : (
+                <StatusBadge status={b.paymentStatus} kind="payment" />
+              )}
+            </div>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setSelected(b)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-stone-50 border border-stone-200 hover:bg-stone-100 text-stone-600 text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Voir les détails de la réservation"
+              >
+                <Eye size={13} /> Détails
+              </button>
             </div>
           </Card>
         ))}
       </div>
 
-      {/* Detail Modal */}
       {selected && (
-        <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={`Réservation ${selected.id}`} size="md">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ['Client', selected.guestName],
-                ['Email', selected.guestEmail],
-                ['Téléphone', selected.guestPhone],
-                ['Chambre', selected.roomName],
-                ['Arrivée', formatDate(selected.checkIn)],
-                ['Départ', formatDate(selected.checkOut)],
-                ['Nuits', selected.nights],
-                ['Total', formatDZD(selected.totalPrice)],
-                ['Créée le', formatDateTime(selected.createdAt)],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <div className="text-xs text-stone-400">{label}</div>
-                  <div className="font-medium text-stone-800">{value}</div>
-                </div>
-              ))}
+        <Modal
+          isOpen={!!selected}
+          onClose={() => setSelected(null)}
+          title={`Réservation ${selected.id}`}
+          size="md"
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-1">Client</p>
+                <p className="font-semibold text-stone-800">{selected.guestName}</p>
+                <p className="text-stone-500">{selected.guestPhone}</p>
+                {selected.guestEmail && <p className="text-stone-500">{selected.guestEmail}</p>}
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-1">Chambre</p>
+                <p className="font-semibold text-stone-800">{selected.roomName}</p>
+                <p className="text-stone-500">{selected.nights} nuit(s)</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-1">Dates</p>
+                <p className="font-semibold text-stone-800">{selected.checkIn} → {selected.checkOut}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-1">Total</p>
+                <p className="font-semibold text-stone-800">{formatDZD(selected.totalPrice)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-1">Statut</p>
+                <StatusBadge status={selected.status} kind="booking" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-1">Paiement</p>
+                <StatusBadge status={selected.paymentStatus} kind="payment" />
+              </div>
             </div>
+
             {selected.notes && (
-              <div className="bg-stone-50 rounded-xl p-3">
-                <div className="text-xs text-stone-400 mb-1">Notes</div>
-                <div className="text-sm text-stone-700">{selected.notes}</div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-stone-400 mb-2">Notes</p>
+                <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-sm text-stone-700">
+                  {selected.notes}
+                </div>
               </div>
             )}
-            <div className="flex items-center gap-2 flex-wrap pt-2">
-              <StatusBadge status={selected.status} kind="booking" />
-              <StatusBadge status={selected.paymentStatus} kind="payment" />
-            </div>
-            {(selected.status === 'pending_confirmation' || selected.status === 'confirmed') && selected.confirmationDeadline && (
-              <DeadlineCountdown
-                deadline={selected.confirmationDeadline}
-                prefix="La réservation expire dans"
-                expiredText="Réservation expirée automatiquement"
-              />
-            )}
-            {selected.status === 'awaiting_payment' && selected.paymentDeadline && (
-              <DeadlineCountdown
-                deadline={selected.paymentDeadline}
-                prefix="Paiement attendu dans"
-                tone="orange"
-                expiredText="Paiement expiré automatiquement"
-              />
-            )}
-            {selected.cancelReason && (
-              <div className="bg-stone-50 rounded-xl p-3 border border-stone-200">
-                <div className="text-xs text-stone-400 mb-1">Motif d'annulation</div>
-                <div className="text-sm text-stone-700">{selected.cancelReason}</div>
-              </div>
-            )}
-            <div className="space-y-3 pt-2 border-t border-stone-100">
-              <Button size="sm" variant="secondary" onClick={() => setSelected(null)} className="w-full">Fermer</Button>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <Button variant="secondary" onClick={() => setSelected(null)} className="w-full sm:w-auto">
+                Fermer
+              </Button>
             </div>
           </div>
         </Modal>
       )}
+
+
 
       {pendingAction && (
         <Modal
@@ -418,7 +475,7 @@ export default function AdminBookingsPage() {
               <Button variant="secondary" onClick={() => setPendingAction(null)} className="w-full sm:w-auto">
                 Annuler
               </Button>
-              <Button onClick={submitPendingAction} className="w-full sm:w-auto">
+              <Button onClick={submitPendingAction} loading={submittingAction} className="w-full sm:w-auto">
                 {pendingAction.confirmLabel || 'Confirmer'}
               </Button>
             </div>

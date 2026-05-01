@@ -83,8 +83,21 @@ const findAvailablePort = async (startPort) => {
 };
 
 const Start = async () => {
+  let databaseReady = false;
+
   try {
     await ConnectDB(process.env.MONGO_URI);
+    databaseReady = true;
+  } catch (err) {
+    console.warn('⚠️ Starting in degraded mode without a database connection.');
+  }
+
+  if (databaseReady) {
+    try {
+      await seedAdmin();
+    } catch (error) {
+      console.warn('⚠️ Admin seed skipped:', error.message);
+    }
 
     const runBookingWorkflow = async () => {
       try {
@@ -96,19 +109,18 @@ const Start = async () => {
 
     await runBookingWorkflow();
     bookingWorkflowInterval = setInterval(runBookingWorkflow, 5 * 60 * 1000);
-    const port = await findAvailablePort(DEFAULT_PORT);
-
-    if (port !== DEFAULT_PORT) {
-      console.warn(`⚠️ Port ${DEFAULT_PORT} is in use. Falling back to port ${port}.`);
-    }
-
-    app.listen(port, () => {
-      console.log(`🚀 Server is listening on port ${port}`);
-    });
-  } catch (err) {
-    console.error('❌ Failed to start server:', err.message);
-    process.exit(1); // exit with failure
   }
+
+  const port = await findAvailablePort(DEFAULT_PORT);
+
+  if (port !== DEFAULT_PORT) {
+    console.warn(`⚠️ Port ${DEFAULT_PORT} is in use. Falling back to port ${port}.`);
+  }
+
+  app.listen(port, () => {
+    console.log(`🚀 Server is listening on port ${port}`);
+    console.log(databaseReady ? '✅ Database connected.' : '⚠️ Database unavailable. API is running in degraded mode.');
+  });
 };
 
 process.on('SIGINT', () => {

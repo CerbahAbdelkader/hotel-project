@@ -229,55 +229,47 @@ export default function AdminContactsPage() {
       </div>
 
       {/* Message Detail Modal */}
-      {showModal && selectedContact && (
-        <Modal onClose={() => setShowModal(false)}>
-          <div className="w-full max-w-2xl">
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="font-display text-xl font-bold text-stone-800">{selectedContact.subject}</h2>
-                  <p className="text-sm text-stone-500 mt-1">De: {selectedContact.name}</p>
-                </div>
-                {statusBadge(selectedContact.status)}
-              </div>
+      {selectedContact && (
+        <Modal isOpen={!!showModal} onClose={() => setShowModal(false)} title={selectedContact.subject} size="sm">
+          <div className="p-4">
+            <div className="mb-3">
+              <div className="text-sm text-stone-500">De</div>
+              <div className="font-medium text-stone-800">{selectedContact.name}</div>
+            </div>
 
-              <div className="bg-stone-50 rounded-lg p-4 mb-4 space-y-2">
-                <div>
-                  <p className="text-xs text-stone-600 font-medium">EMAIL</p>
-                  <p className="text-sm text-stone-800">
-                    <a href={`mailto:${selectedContact.email}`} className="text-primary-600 hover:underline">
-                      {selectedContact.email}
-                    </a>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-stone-600 font-medium">DATE</p>
-                  <p className="text-sm text-stone-800">{new Date(selectedContact.createdAt).toLocaleString('fr-FR')}</p>
-                </div>
+            <div className="mb-3">
+              <div className="text-sm text-stone-500">Email</div>
+              <div className="text-sm text-primary-600">
+                <a href={`mailto:${selectedContact.email}`} className="hover:underline">{selectedContact.email}</a>
               </div>
+            </div>
 
-              <div className="mb-6">
-                <p className="text-xs text-stone-600 font-medium mb-2">MESSAGE</p>
-                <div className="bg-white border border-stone-200 rounded-lg p-4 max-h-64 overflow-y-auto whitespace-pre-wrap text-sm text-stone-700 leading-relaxed">
-                  {selectedContact.message}
-                </div>
-              </div>
+            <div className="mb-3">
+              <div className="text-sm text-stone-500">Date</div>
+              <div className="text-sm text-stone-700">{new Date(selectedContact.createdAt).toLocaleString('fr-FR')}</div>
+            </div>
 
-              <div className="flex justify-end gap-2">
-                {selectedContact.status !== 'replied' && (
-                  <Button
-                    onClick={() => {
-                      handleStatusChange(selectedContact._id, 'replied')
-                      setShowModal(false)
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Check size={16} />
-                    Marquer comme répondu
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setShowModal(false)}>Fermer</Button>
+            <div className="mb-4">
+              <div className="text-sm text-stone-500 mb-2">Message</div>
+              <div className="bg-white border border-stone-200 rounded-lg p-3 max-h-48 overflow-y-auto whitespace-pre-wrap text-sm text-stone-700">
+                {selectedContact.message}
               </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              {selectedContact.status !== 'replied' && (
+                <Button
+                  onClick={() => {
+                    handleStatusChange(selectedContact._id, 'replied')
+                    setShowModal(false)
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Check size={16} />
+                  Marquer comme répondu
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setShowModal(false)}>Fermer</Button>
             </div>
           </div>
         </Modal>
