@@ -83,6 +83,13 @@ export default function Navbar() {
                 </button>
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-stone-100 py-1 animate-fade-in">
+                    <Link
+                      to="/my-bookings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-warm-50"
+                    >
+                      <User size={14} /> Mon compte
+                    </Link>
                     {isAdmin && (
                       <Link to="/admin/dashboard" onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-warm-50">
@@ -139,6 +146,13 @@ export default function Navbar() {
           <div className="pt-2 border-t border-stone-100 flex flex-col gap-2">
             {isLoggedIn ? (
               <>
+                <Link
+                  to="/my-bookings"
+                  onClick={() => setOpen(false)}
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-stone-600"
+                >
+                  Mon compte
+                </Link>
                 {isAdmin && (
                   <Link to="/admin/dashboard" onClick={() => setOpen(false)}
                     className="block px-3 py-2.5 rounded-lg text-sm font-medium text-stone-600">
