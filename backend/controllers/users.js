@@ -116,7 +116,34 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body;
+    const updates = {};
+    if (name)  updates.name  = name.trim();
+    if (email) updates.email = email.trim().toLowerCase();
+    if (phone) updates.phone = phone.trim();
 
+    if (password) {
+      const user = await User.findById(req.user._id);
+      if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' });
+      Object.assign(user, updates);
+      user.password = password;
+      await user.save();
+      const { password: _, ...safeUser } = user._doc;
+      return res.status(StatusCodes.OK).json({ user: safeUser });
+    }
 
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).select('-password');
+    if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' });
+    return res.status(StatusCodes.OK).json({ user });
+  } catch (error) {
+    console.error('Error during profile update:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: error.message });
+    }
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
+  }
+};
 
-module.exports={login,register,getAllUserProfile,deleteUser,deleteAccount}
+module.exports={login,register,getAllUserProfile,deleteUser,deleteAccount,updateProfile}

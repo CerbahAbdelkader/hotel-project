@@ -9,17 +9,6 @@ const BookingContext = createContext(null)
 
 const DEFAULT_ROOM_IMAGE = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80'
 
-const toFrontendRoomType = (type) => {
-  if (type === 'single' || type === 'suite') return type
-  if (type === 'double') return 'superior'
-  return type || 'classic'
-}
-
-const toBackendRoomType = (type) => {
-  if (type === 'single' || type === 'suite' || type === 'double') return type
-  if (type === 'classic' || type === 'superior' || type === 'deluxe' || type === 'family') return 'double'
-  return 'double'
-}
 
 const defaultAmenitiesByType = {
   single: ['Wi-Fi gratuit', 'Climatisation', 'TV satellite', 'Salle de bain privée'],
@@ -34,12 +23,12 @@ const addHoursIso = (dateValue, hours) => new Date(new Date(dateValue).getTime()
 
 const normalizeRoom = (room, index) => {
   const roomId = room?._id || room?.id
-  const normalizedType = toFrontendRoomType(room?.type)
+  const type = room?.type || 'classic'
   const name = room?.name || (room?.roomNumber ? `Chambre ${room.roomNumber}` : `Chambre ${index + 1}`)
   const image = room?.image || room?.images?.[0] || DEFAULT_ROOM_IMAGE
   const amenities = Array.isArray(room?.amenities) && room.amenities.length
     ? room.amenities
-    : (defaultAmenitiesByType[normalizedType] || defaultAmenitiesByType.classic)
+    : (defaultAmenitiesByType[type] || defaultAmenitiesByType.classic)
   const status = normalizeRoomStatus(room)
 
   return {
@@ -49,7 +38,7 @@ const normalizeRoom = (room, index) => {
     hotelName: room?.hotel?.name || '',
     roomNumber: room?.roomNumber || String(index + 1),
     name,
-    type: normalizedType,
+    type,
     price: Number(room?.price || room?.pricePerNight || 0),
     capacity: Number(room?.capacity || room?.maxGuests || 2),
     size: Number(room?.size || 25),
@@ -397,15 +386,37 @@ export function BookingProvider({ children }) {
 
   }
 
-  const createEventReservation = (data) => {
-    const newReservation = {
-      id: 'EV-' + String(eventReservations.length + 1).padStart(3, '0'),
-      ...data,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+  const createEventReservation = async (data) => {
+    try {
+      const result = await apiRequest('/api/event-reservations', {
+        method: 'POST',
+        withAuth: isLoggedIn,
+        body: {
+          clientName: data.clientName,
+          email: data.email,
+          phone: data.phone,
+          eventType: data.eventType,
+          guests: data.guests,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          services: data.services,
+          message: data.message,
+        },
+      })
+      const newReservation = normalizeEventReservation(result?.reservation || data, eventReservations.length)
+      setEventReservations(prev => [...prev, newReservation])
+      return { success: true, reservation: newReservation }
+    } catch {
+      // Fallback: save locally so the user's submission is not lost
+      const newReservation = {
+        id: 'EV-' + String(eventReservations.length + 1).padStart(3, '0'),
+        ...data,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      }
+      setEventReservations(prev => [...prev, newReservation])
+      return { success: true, reservation: newReservation }
     }
-    setEventReservations(prev => [...prev, newReservation])
-    return { success: true, reservation: newReservation }
   }
 
   const changeEventReservationStatus = async (id, status) => {
@@ -507,24 +518,30 @@ export function BookingProvider({ children }) {
           body: {
             hotel: hotels[0]._id,
             roomNumber: room.roomNumber || String(Date.now()).slice(-4),
-            type: toBackendRoomType(room.type),
+            name: room.name || '',
+            type: room.type || 'classic',
             price: Number(room.price),
             status: room.status || (room.available ? 'available' : 'reserved'),
             available: room.status ? room.status === 'available' : room.available,
             maintenanceNote: room.maintenanceNote || '',
             maxGuests: Number(room.capacity || 2),
+            size: Number(room.size || 25),
+            floor: Number(room.floor || 1),
+            description: room.description || '',
+            image: room.image || '',
           },
         })
 
         setRooms(prev => [...prev, normalizeRoom(created.room, prev.length)])
-        return
-      } catch {
-        // Fall back to local optimistic behavior if backend creation fails.
+        return { success: true }
+      } catch (err) {
+        return { success: false, message: err.message || 'Impossible de créer la chambre.' }
       }
     }
 
     const newRoom = { ...room, id: String(Date.now()), status: room.status || 'available', available: room.status ? room.status === 'available' : true, maintenanceNote: room.maintenanceNote || '' }
     setRooms(prev => [...prev, newRoom])
+    return { success: true }
   }
 
   const updateRoom = async (id, updates) => {
@@ -538,7 +555,7 @@ export function BookingProvider({ children }) {
           body: {
             roomNumber: updates.roomNumber || existingRoom.roomNumber,
             name: updates.name || existingRoom.name,
-            type: toBackendRoomType(updates.type || existingRoom.type),
+            type: updates.type || existingRoom.type,
             price: Number(updates.price ?? existingRoom.price),
             status: updates.status || existingRoom.status,
             available: typeof updates.available === 'boolean' ? updates.available : (updates.status || existingRoom.status) === 'available',
@@ -552,13 +569,15 @@ export function BookingProvider({ children }) {
         })
 
         setRooms(prev => prev.map((r, index) => String(r.id) === String(id) ? normalizeRoom(updated.room, index) : r))
-        return
-      } catch {
-        // Fall back to local update when API update is unavailable.
+        return { success: true }
+      } catch (err) {
+        return { success: false, message: err.message || 'Impossible de mettre à jour la chambre.' }
       }
     }
 
+    // No backendId — local-only update (mock data or offline)
     setRooms(prev => prev.map(r => String(r.id) === String(id) ? { ...r, ...updates, status: updates.status || r.status, available: (updates.status || r.status) === 'available' ? true : (updates.status === 'maintenance' ? false : updates.available ?? r.available), maintenanceNote: updates.maintenanceNote ?? r.maintenanceNote } : r))
+    return { success: true }
   }
 
   const deleteRoom = async (id) => {

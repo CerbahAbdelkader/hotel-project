@@ -7,6 +7,7 @@ import Modal from '../../shared/ui/Modal'
 import Input, { Select, Textarea } from '../../shared/ui/Input'
 import Card from '../../shared/ui/Card'
 import StatusBadge from '../../shared/ui/Badge'
+import Toast from '../../shared/ui/Toast'
 
 const emptyRoom = { name: '', type: 'classic', price: '', capacity: 2, size: '', floor: 1, description: '', image: '', status: 'available', maintenanceNote: '' }
 
@@ -18,6 +19,7 @@ export default function AdminRoomsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [imageMethod, setImageMethod] = useState('url') // 'url' or 'upload'
   const [uploadedImage, setUploadedImage] = useState(null)
+  const [toast, setToast] = useState(null)
 
   const openAdd = () => { 
     setForm(emptyRoom); 
@@ -49,19 +51,22 @@ export default function AdminRoomsPage() {
     }
   }
 
-  const handleSave = () => {
-    const data = { 
-      ...form, 
-      price: Number(form.price), 
-      capacity: Number(form.capacity), 
-      size: Number(form.size), 
+  const handleSave = async () => {
+    const data = {
+      ...form,
+      price: Number(form.price),
+      capacity: Number(form.capacity),
+      size: Number(form.size),
       floor: Number(form.floor),
       status: form.status,
       maintenanceNote: form.status === 'maintenance' ? form.maintenanceNote : '',
       image: imageMethod === 'upload' ? uploadedImage : form.image
     }
-    if (editRoom) updateRoom(editRoom.id, data)
-    else addRoom(data)
+    const result = editRoom ? await updateRoom(editRoom.id, data) : await addRoom(data)
+    if (result?.success === false) {
+      setToast({ type: 'error', message: result.message || 'Erreur lors de la sauvegarde.' })
+      return
+    }
     setModalOpen(false)
     setUploadedImage(null)
   }
@@ -262,6 +267,10 @@ export default function AdminRoomsPage() {
           <Button variant="danger" onClick={() => handleDelete(deleteConfirm)} className="w-full sm:w-auto">Supprimer</Button>
         </div>
       </Modal>
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} duration={4000} />
+      )}
     </div>
   )
 }

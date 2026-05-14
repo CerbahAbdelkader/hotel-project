@@ -97,11 +97,29 @@ export function AuthProvider({ children }) {
     clearAuthToken()
   }
 
+  const updateProfile = async (fields) => {
+    try {
+      const data = await apiRequest('/api/auth/profile', {
+        method: 'PATCH',
+        withAuth: true,
+        body: fields,
+      })
+      const updated = data?.user
+      if (!updated) return { success: false, message: 'Réponse serveur invalide.' }
+      const merged = { ...user, ...updated }
+      setUser(merged)
+      localStorage.setItem('hotel_user', JSON.stringify(merged))
+      return { success: true }
+    } catch (err) {
+      return { success: false, message: err.message || 'Mise à jour impossible.' }
+    }
+  }
+
   const isAdmin = user?.role === 'admin'
   const isLoggedIn = !!user
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAdmin, isLoggedIn, error, setError }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, isAdmin, isLoggedIn, error, setError }}>
       {children}
     </AuthContext.Provider>
   )

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useBooking } from '../../context/BookingContext'
 import { formatDZD, calcNights } from '../../utils/formatters'
-import { Calendar, AlertCircle, Clock, Trash2, FileText } from 'lucide-react'
+import { Calendar, AlertCircle, Clock, Trash2, FileText, User, ChevronDown, ChevronUp } from 'lucide-react'
 import Card from '../../shared/ui/Card'
 import Button from '../../shared/ui/Button'
 import Toast from '../../shared/ui/Toast'
@@ -11,14 +11,24 @@ import DeadlineCountdown from '../../shared/ui/DeadlineCountdown'
 import { Link } from 'react-router-dom'
 
 export default function MyBookingsPage() {
-  const { user, isLoggedIn } = useAuth()
+  const { user, isLoggedIn, updateProfile } = useAuth()
   const { bookings, deleteBooking } = useBooking()
   const [toast, setToast] = useState(null)
   const [cancellingId, setCancellingId] = useState(null)
 
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' })
+  const [profileLoading, setProfileLoading] = useState(false)
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm(f => ({ ...f, name: user.name || '', email: user.email || '', phone: user.phone || '' }))
+    }
+  }, [user])
 
   if (!isLoggedIn) {
     return (
@@ -58,14 +68,135 @@ export default function MyBookingsPage() {
     }
   }
 
+  const setField = (k) => (e) => setProfileForm(f => ({ ...f, [k]: e.target.value }))
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault()
+    if (profileForm.password && profileForm.password !== profileForm.confirmPassword) {
+      setToast({ type: 'error', message: 'Les mots de passe ne correspondent pas.' })
+      return
+    }
+    const fields = {}
+    if (profileForm.name && profileForm.name !== user?.name) fields.name = profileForm.name
+    if (profileForm.email && profileForm.email !== user?.email) fields.email = profileForm.email
+    if (profileForm.phone !== user?.phone) fields.phone = profileForm.phone
+    if (profileForm.password) fields.password = profileForm.password
+
+    if (Object.keys(fields).length === 0) {
+      setToast({ type: 'error', message: 'Aucune modification détectée.' })
+      return
+    }
+    setProfileLoading(true)
+    const result = await updateProfile(fields)
+    setProfileLoading(false)
+    if (result.success) {
+      setToast({ type: 'success', message: 'Profil mis à jour avec succès.' })
+      setProfileForm(f => ({ ...f, password: '', confirmPassword: '' }))
+      setProfileOpen(false)
+    } else {
+      setToast({ type: 'error', message: result.message || 'Erreur lors de la mise à jour.' })
+    }
+  }
+
   return (
     <div className="py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-10">
-          <p className="text-primary-600 text-sm font-semibold uppercase tracking-wider mb-2">Mes réservations</p>
+          <p className="text-primary-600 text-sm font-semibold uppercase tracking-wider mb-2">Mon compte</p>
           <h1 className="font-display text-4xl font-bold text-stone-800">Historique des réservations</h1>
           <p className="text-stone-500 mt-3">Visualisez et gérez toutes vos réservations d'hôtel.</p>
         </div>
+
+        {/* Profile edit section */}
+        <Card className="mb-8 overflow-hidden">
+          <button
+            onClick={() => setProfileOpen(o => !o)}
+            className="w-full flex items-center justify-between p-5 text-left hover:bg-stone-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center">
+                <User size={16} className="text-primary-700" />
+              </div>
+              <div>
+                <p className="font-semibold text-stone-800 text-sm">{user?.name}</p>
+                <p className="text-xs text-stone-500">{user?.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-primary-600 font-medium">
+              <span>Modifier le profil</span>
+              {profileOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </div>
+          </button>
+
+          {profileOpen && (
+            <form onSubmit={handleProfileUpdate} className="border-t border-stone-100 p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Nom complet</label>
+                <input
+                  type="text"
+                  value={profileForm.name}
+                  onChange={setField('name')}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                  placeholder="Votre nom"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Adresse email</label>
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={setField('email')}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                  placeholder="votre@email.com"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  value={profileForm.phone}
+                  onChange={setField('phone')}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                  placeholder="+213 ..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Nouveau mot de passe <span className="text-stone-400">(optionnel)</span></label>
+                <input
+                  type="password"
+                  value={profileForm.password}
+                  onChange={setField('password')}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                  placeholder="Laisser vide pour ne pas changer"
+                />
+              </div>
+              {profileForm.password && (
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-stone-600 mb-1">Confirmer le mot de passe</label>
+                  <input
+                    type="password"
+                    value={profileForm.confirmPassword}
+                    onChange={setField('confirmPassword')}
+                    className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    placeholder="Répétez le nouveau mot de passe"
+                  />
+                </div>
+              )}
+              <div className="sm:col-span-2 flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(false)}
+                  className="px-4 py-2 text-sm text-stone-600 hover:text-stone-800 transition-colors"
+                >
+                  Annuler
+                </button>
+                <Button type="submit" loading={profileLoading} size="sm">
+                  Enregistrer les modifications
+                </Button>
+              </div>
+            </form>
+          )}
+        </Card>
 
         {userBookings.length === 0 ? (
           <Card className="p-12 text-center">
