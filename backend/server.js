@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const net = require('net');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const ConnectDB = require('./database/connect')
 const authRoutes = require('./routes/user');
 const hotelRoutes = require('./routes/hotels');
@@ -89,7 +90,19 @@ const Start = async () => {
     await ConnectDB(process.env.MONGO_URI);
     databaseReady = true;
   } catch (err) {
-    console.warn('⚠️ Starting in degraded mode without a database connection.');
+    console.warn('⚠️ Primary DB connection failed:', err.message);
+
+    // Try a local fallback URI if the primary (cloud) URI fails
+    const fallbackUri = process.env.MONGO_FALLBACK_URI || 'mongodb://127.0.0.1:27017/hotel_db';
+    try {
+      console.log(`Attempting fallback DB URI: ${fallbackUri}`);
+      await ConnectDB(fallbackUri);
+      databaseReady = true;
+      console.log('✅ Connected using fallback MongoDB URI.');
+    } catch (err2) {
+      console.warn('⚠️ Fallback DB connection failed:', err2.message);
+      console.warn('⚠️ Starting in degraded mode without a database connection.');
+    }
   }
 
   if (databaseReady) {
